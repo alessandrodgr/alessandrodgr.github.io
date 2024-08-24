@@ -2,153 +2,169 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Alessandro Di Giorgio</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-0evHe/X+R7YkIZDRvuzKMRqM+OrBnVFBL6DOitfPri4tjfHxaWutUpFmBp4vmVor" crossorigin="anonymous">
-    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
       body {
-        background-color: whitesmoke;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        background-color: #f5f5f7;
+        color: #1d1d1f;
+        margin: 0;
+        padding: 0;
       }
 
-      .container {
-        margin-top: 0px !important;
-        padding: 30px;
+      .container-fluid {
+        max-width: 1200px;
+        margin: auto;
+        padding: 2rem;
+      }
+
+      .header {
+        text-align: center;
+        padding: 50px 0;
         background-color: white;
-        height: 100%;
-        border-left: 1.5px solid #e5e5e5;
-        border-right: 1.5px solid #e5e5e5;
+        border-bottom: 1px solid #e5e5e5;
       }
 
-      @media (min-width: 1200px) {
-        @media only screen and (min-width : 576px) {
-            .container {
-              margin-top: 50px;
-            }
-        }
+      .header img {
+        width: 120px;
+        border-radius: 50%;
+        margin-bottom: 20px;
       }
 
-        @media only screen and (min-width : 992px) {
-            .container {
-              max-width: 940px;
-            }
-        }
+      .header h1 {
+        font-size: 2.5rem;
+        font-weight: 600;
+        margin-bottom: 10px;
+      }
 
-        .publink {
-          text-decoration: none;
-        }
+      .header p {
+        font-size: 1.25rem;
+        margin-bottom: 5px;
+      }
 
-        .pic {
-          width: 150px;
-          border-radius: 50%;
-        }
+      .section-title {
+        font-size: 1.75rem;
+        font-weight: 500;
+        margin: 30px 0 20px;
+      }
+
+      .content-section {
+        background-color: #ffffff;
+        padding: 20px;
+        margin-bottom: 20px;
+        border: 1px solid #e5e5e5;
+      }
+
+      .list {
+        list-style-type: none;
+        padding-left: 0;
+        font-size: 1.1rem;
+        line-height: 1.8;
+        color: #333;
+        /* font-weight: 500; */
+      }
+
+      .list li {
+        margin-bottom: 15px;
+      }
+
+      .link {
+        color: #0071e3;
+        text-decoration: none;
+      }
+
+      .link:hover {
+        color: #2293f5;
+      }
+
+      footer {
+        background-color: #1d1d1f;
+        color: #f5f5f7;
+        padding: 30px 0;
+        text-align: center;
+      }
+
+      footer p {
+        margin: 0;
+      }
     </style>
   </head>
   <body>
-    <!-- <nav class="navbar sticky-top navbar-expand-lg navbar-dark bg-dark">
-      <div class="container-fluid">
-        <a class="navbar-brand" href="#">Navbar</a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-          <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarNav">
-          <ul class="navbar-nav">
-            <li class="nav-item">
-              <a class="nav-link active" aria-current="page" href="#">Home</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="#news">News</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="#pubs">Publications</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link" href="cv.pdf">CV</a>
-            </li>
-          </ul>
+
+    <header class="header">
+      <img src="foto.jpg" alt="Alessandro Di Giorgio">
+      <h1>Alessandro Di Giorgio</h1>
+      <p>Postdoctoral Researcher</p>
+      <p>University College London</p>
+      <p><a class="link" href="http://pplv.cs.ucl.ac.uk">Programming Principles, Logic and Verification group</a></p>
+    </header>
+
+    <div class="container-fluid">
+
+      <!-- Research Interests and Contact side by side -->
+      <div class="row">
+        <div class="col-md-6">
+          <section class="content-section">
+            <h2 class="section-title">Contact</h2>
+            <ul class="list">
+              <li>✉️ a [dot] giorgio [at] ucl [dot] ac [dot] uk</li>
+              <li>📍 Room B.09, UCL Department of Computer Science, Gower Street 66-72, London WC1E 6BT, UK</li>
+            </ul>
+          </section>
+        </div>
+        <div class="col-md-6">
+          <section class="content-section">
+            <h2 class="section-title">Research Interests</h2>
+            <ul class="list">
+              <li>Programming language semantics</li>
+              <li>Categorical semantics</li>
+              <li>String diagrams</li>
+              <li>Logic</li>
+            </ul>
+          </section>
         </div>
       </div>
-    </nav> -->
-    <div class="container">
-      <!-- BIO -->
+
+      <!-- News and Publications side by side -->
       <div class="row">
-        <div class="d-flex align-items-center">
-        <div class="flex-shrink-0">
-          <img class="pic" src="foto.jpg">
+        <div class="col-md-6">
+          <section class="content-section">
+            <h2 class="section-title">News</h2>
+            <ul class="list">
+              <li>Our paper "Diagrammatic Algebra of First Order Logic" has been accepted at LICS 2024 <a class="link" href="https://arxiv.org/abs/2401.07055">(preprint)</a></li>
+              <li>I am giving a talk at <a class="link" href="https://www.cl.cam.ac.uk/events/syco/12/">SYCO 12</a> in Birmingham (April 2024)</li>
+              <li>I successfully defended my thesis <a class="link" href="https://etd.adm.unipi.it/theses/available/etd-02112024-183216/unrestricted/thesis.pdf">Diagrammatic Algebra of Relations</a>! (February 2024)</li>
+              <li>I am giving an invited talk at RFC Walters Tribute in Tallinn (July 2023)</li>
+              <li>I am visiting Prof. <a class="link" href="https://www.cs.ox.ac.uk/people/aleks.kissinger/">Aleks Kissinger</a> and the <a class="link" href="https://www.cs.ox.ac.uk/activities/quantum/index.html">Quantum Group</a> at the University of Oxford (March-April 2023)</li>
+              <li>I am co-organizing the <a class="link" href="https://progetto-itaca.github.io/ItaCa-22/">3rd ItaCa workshop</a> in Pisa (21-22 December 2022)</li>
+              <li>Our paper "Deconstructing the Calculus of Relations with Tape Diagrams" has been accepted at POPL 2023 <a class="link" href="https://arxiv.org/abs/2210.09950">(preprint)</a></li>
+            </ul>
+          </section>
         </div>
-        <div class="flex-grow-1 ms-3">
-          <h1 class="mt-0 display-6">Alessandro Di Giorgio</h1>
-            <div>Postdoctoral researcher</div>
-            <div>University College London</div>
-            <div><a href="http://pplv.cs.ucl.ac.uk">Programming Principles, Logic and Verification group</a></div>
+        <div class="col-md-6">
+          <section class="content-section">
+            <h2 class="section-title">Publications</h2>
+            <ul class="list">
+              <li>F. Bonchi, A. Di Giorgio, D. Trotta - <em>When Lawvere meets Peirce: an equational presentation of boolean hyperdoctrines</em>. <strong>MFCS 2024</strong> <a class="link" href="">📄</a></li>
+              <li>F. Bonchi, A. Di Giorgio, N. Haydon and P. Sobocinski - <em>Diagrammatic Algebra of First Order Logic</em>. <strong>LICS 2024</strong> <a class="link" href="https://dl.acm.org/doi/10.1145/3661814.3662078">📄</a></li>
+              <li>F. Bonchi, A. Di Giorgio and A. Santamaria - <em>Deconstructing the Calculus of Relations with Tape Diagrams</em>. <strong>POPL 2023</strong> <a class="link" href="https://dl.acm.org/doi/10.1145/3571257">📄</a></li>
+              <li>F. Bonchi, A. Di Giorgio and P. Sobocinski - <em>Diagrammatic Polyhedral Algebra</em>. <strong>FSTTCS 2021</strong> <a class="link" href="https://drops.dagstuhl.de/opus/volltexte/2021/15551/pdf/LIPIcs-FSTTCS-2021-40.pdf">📄</a></li>
+              <li>F. Bonchi, A. Di Giorgio and F. Zanasi - <em>From Farkas' Lemma to Linear Programming: an Exercise in Diagrammatic Algebra</em>. <strong>CALCO 2021</strong> <a class="link" href="https://drops.dagstuhl.de/opus/volltexte/2021/15364/pdf/LIPIcs-CALCO-2021-9.pdf">📄</a></li>
+              <li>A. Di Giorgio and M. Danelutto - <em>Backus FP revisited: A parallel perspective on modern multicores</em>. <strong>ParCo 2019</strong> <a class="link" href="https://ebooks.iospress.nl/doi/10.3233/APC200073">📄</a></li>
+            </ul>
+            <p>See also my <a class="link" href="https://scholar.google.com/citations?user=oDV0G4QAAAAJ">Google Scholar</a> profile</p>
+          </section>
         </div>
       </div>
-      </div>
-      <br>
-      <hr>
-      <div class="row">
-      <div class="col-md-auto">
-      <div class="row">
-        <div class="col"><h5>Research interests</h5></div>
-      </div>
-          <ul class="list">
-            <li>Programming language semantics</li>
-            <li>Categorical semantics</li>
-            <li>String diagrams</li>
-            <li>Logic</li>
-        </ul>
-      </div>
-      <div class="col-md-auto">
-        <!-- CONTACTS -->
-      <div class="row">
-        <div class="col"><h5>Contact</h5></div>
-      </div>
-      <div class="row">
-        <p>✉️ a [dot] giorgio [at] ucl [dot] ac [dot] uk</p>
-      </div>
-      <!-- <div class="row">
-        <p>📞 +39 050 221 3157</p>
-      </div> -->
-      <div class="row">
-        <p>📍 Room B.09, <br> UCL Department of Computer Science, <br>Gower Street 66-72, <br>London WC1E 6BT, UK</p>
-      </div>
-      </div>
-      </div>
-      <hr>
-      <!-- NEWS -->
-      <div class="row">
-        <div class="col"><h5>News</h5></div>
-      </div>
-        <ul class="list" id="news">
-          <li>Our paper "Diagrammatic Algebra of First Order Logic" has been accepted at LICS 2024 <a href="https://arxiv.org/abs/2401.07055">(preprint)</a></li>
-          <li>I am giving at talk at <a href="https://www.cl.cam.ac.uk/events/syco/12/">SYCO 12</a> in Birmingham (April 2024)</li>
-          <li>I successfully defended my thesis <a href="https://etd.adm.unipi.it/theses/available/etd-02112024-183216/unrestricted/thesis.pdf">Diagrammatic Algebra of Relations</a>! (February 2024)</li>
-          <li>I am giving an invited talk at RFC Walters Tribute in Tallinn (July 2023)</li>
-          <li>I am visiting Prof. <a href="https://www.cs.ox.ac.uk/people/aleks.kissinger/">Aleks Kissinger</a> and the <a href="https://www.cs.ox.ac.uk/activities/quantum/index.html">Quantum Group</a> at the University of Oxford (March-April 2023)</li>
-          <li>I am co-organizing the <a href="https://progetto-itaca.github.io/ItaCa-22/">3rd ItaCa workshop</a> in Pisa (21-22 December 2022)</li>
-          <!-- <li><mark>I am co-organizing the <a href="https://progetto-itaca.github.io/ItaCa-22/">3rd ItaCa workshop</a> in Pisa (21-22 December 2022)</mark></li> -->
-          <li>Our paper "Deconstructing the Calculus of Relations with Tape Diagrams" has been accepted at POPL 2023 <a href="https://arxiv.org/abs/2210.09950">(preprint)</a></li>
-      </ul>
-      <hr>
-      <!-- PUBLICATIONS -->
-      <div class="row">
-        <div class="col"><h5>Publications</h5></div>
-      </div>
-        <ul class="list" id="pubs">
-          <li>F. Bonchi, A. Di Giorgio, D. Trotta - <em>When Lawvere meets Peirce: an equational presentation of boolean hyperdoctrines</em>. <strong>MFCS 2024</strong> <a class="publink" href="">📄</a> </li>
-          <li>F. Bonchi, A. Di Giorgio, N. Haydon and P. Sobocinski - <em>Diagrammatic Algebra of First Order Logic</em>. <strong>LICS 2024</strong> <a class="publink" href="https://dl.acm.org/doi/10.1145/3661814.3662078">📄</a> </li>
-          <li>F. Bonchi, A. Di Giorgio and A. Santamaria - <em>Deconstructing the Calculus of Relations with Tape Diagrams</em>. <strong>POPL 2023</strong> <a class="publink" href="https://dl.acm.org/doi/10.1145/3571257">📄</a> </li>
-          <li>F. Bonchi, A. Di Giorgio and P. Sobocinski - <em>Diagrammatic Polyhedral Algebra</em>. <strong>FSTTCS 2021</strong> <a class="publink" href="https://drops.dagstuhl.de/opus/volltexte/2021/15551/pdf/LIPIcs-FSTTCS-2021-40.pdf">📄</a></li>
-          <li>F. Bonchi, A. Di Giorgio and F. Zanasi - <em>From Farkas' Lemma to Linear Programming: an Exercise in Diagrammatic Algebra</em>. <strong>CALCO 2021</strong> <a class="publink" href="https://drops.dagstuhl.de/opus/volltexte/2021/15364/pdf/LIPIcs-CALCO-2021-9.pdf">📄</a></li>
-          <li>A. Di Giorgio and M. Danelutto - <em>Backus FP revisited: A parallel perspective on modern multicores</em>. <strong>ParCo 2019</strong> <a class="publink" href="https://ebooks.iospress.nl/doi/10.3233/APC200073">📄</a></li>
-        </ul>
-      <div class="row">
-        <div class="col">See also my <a href="https://scholar.google.com/citations?user=oDV0G4QAAAAJ">Google Scholar</a> profile</div>
-      </div>
-      <!-- <hr> -->
-      <hr>
-      <div class="text-center"><img src="zeroarrow.jpg" alt="This page is both initial and terminal" width="80px"></div>
+
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/js/bootstrap.bundle.min.js" integrity="sha384-pprn3073KE6tl6bjs2QrFaJGz5/SUsLqktiwsUTF55Jfv3qYSDhgCecCxMW52nD2" crossorigin="anonymous"></script>
+
+    <footer>
+      <p>&copy; 2024 Alessandro Di Giorgio</p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   </body>
 </html>
