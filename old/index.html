@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alessandro Di Giorgio</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        background-color: #f5f5f7;
+        color: #1d1d1f;
+        margin: 0;
+        padding: 0;
+      }
+
+      .container-fluid {
+        max-width: 1200px;
+        margin: auto;
+        padding: 2rem;
+      }
+
+
+      .header {
+        text-align: center;
+        padding: 20px 100px;
+        background-color: white;
+        /* background-image: url(bg.jpg); */
+        border-bottom: 8px solid #1d1d1f;
+      }
+
+      .header img {
+        width: 140px;
+        border-radius: 50%;
+        /* margin-bottom: 20px; */
+      }
+
+      .header h1 {
+        font-size: 2.5rem;
+        font-weight: 600;
+        margin-bottom: 10px;
+      }
+
+      .header p {
+        font-size: 1.25rem;
+        margin-bottom: 5px;
+      }
+
+      .section-title {
+        font-size: 1.75rem;
+        font-weight: 500;
+        margin: 30px 0 20px;
+      }
+
+      .content-section {
+        background-color: #ffffff;
+        padding: 20px;
+        margin-bottom: 20px;
+        border-bottom: 8px solid #1d1d1f;
+      }
+
+      .list {
+        list-style-type: none;
+        padding-left: 0;
+        font-size: 1.1rem;
+        line-height: 1.8;
+        color: #333;
+        /* font-weight: 500; */
+      }
+
+      .list li {
+        margin-bottom: 15px;
+      }
+
+      .link {
+        color: #0071e3;
+        text-decoration: none;
+      }
+
+      .link:hover {
+        color: #2293f5;
+      }
+
+      footer {
+        background-color: #1d1d1f;
+        color: #f5f5f7;
+        padding: 30px 0;
+        text-align: center;
+      }
+
+      footer p {
+        margin: 0;
+      }
+    </style>
+  </head>
+  <body>
+
+    <header class="header">
+      <div class="row">
+        <div class="col-md-3">
+              <img src="foto.jpg" alt="Alessandro Di Giorgio" style="">
+        </div>
+        <div class="col-md-9" style="text-align: left;">
+              <div style="/* background-color: rgba(240,240,240,0.6); */ padding: 10px;">
+                <h1>Alessandro Di Giorgio</h1>
+                <p>Postdoctoral Researcher</p>
+                <!-- <p>University College London</p>
+                <p>Programming Principles, Logic and Verification group</p> -->
+        </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="container-fluid">
+
+      <!-- Research Interests and Contact side by side -->
+      <div class="row">
+        <div class="col-md-6">
+          <section class="content-section">
+            <h2 class="section-title">Contact</h2>
+            <ul class="list">
+              <li>✉️ alessandrodgr [at] gmail [dot] com</li>
+              <!-- <li>📍 Room B.09, UCL Department of Computer Science, Gower Street 66-72, London WC1E 6BT, UK</li> -->
+            </ul>
+          </section>
+        </div>
+        <div class="col-md-6">
+          <section class="content-section">
+            <h2 class="section-title">Research Interests</h2>
+            <ul class="list">
+              <li>Programming language semantics</li>
+              <li>Categorical semantics</li>
+              <li>String diagrams</li>
+              <li>Logic</li>
+            </ul>
+          </section>
+        </div>
+      </div>
+
+      <!-- News and Publications side by side -->
+      <div class="row">
+        <div class="col-md-6">
+          <section class="content-section">
+            <h2 class="section-title">News</h2>
+            <ul class="list">
+              <li>Our paper "Diagrammatic Algebra of First Order Logic" has been accepted at LICS 2024 <a class="link" href="https://arxiv.org/abs/2401.07055">(preprint)</a></li>
+              <li>I am giving a talk at <a class="link" href="https://www.cl.cam.ac.uk/events/syco/12/">SYCO 12</a> in Birmingham (April 2024)</li>
+              <li>I successfully defended my thesis <a class="link" href="https://etd.adm.unipi.it/theses/available/etd-02112024-183216/unrestricted/thesis.pdf">Diagrammatic Algebras of Relations</a>! (February 2024)</li>
+              <li>I am giving an invited talk at RFC Walters Tribute in Tallinn (July 2023)</li>
+              <li>I am visiting Prof. <a class="link" href="https://www.cs.ox.ac.uk/people/aleks.kissinger/">Aleks Kissinger</a> and the <a class="link" href="https://www.cs.ox.ac.uk/activities/quantum/index.html">Quantum Group</a> at the University of Oxford (March-April 2023)</li>
+              <li>I am co-organizing the <a class="link" href="https://progetto-itaca.github.io/ItaCa-22/">3rd ItaCa workshop</a> in Pisa (21-22 December 2022)</li>
+              <li>Our paper "Deconstructing the Calculus of Relations with Tape Diagrams" has been accepted at POPL 2023 <a class="link" href="https://arxiv.org/abs/2210.09950">(preprint)</a></li>
+            </ul>
+          </section>
+        </div>
+        <div class="col-md-6">
+          <section class="content-section">
+            <h2 class="section-title">Publications</h2>
+            <ul class="list">
+              <li>C. Reader, A. Di Giorgio - <em>String Diagrams for Closed Symmetric Monoidal Categories</em>. (Accepted at) <strong>CSL 2026</strong> <a class="link" href="https://arxiv.org/abs/2512.06499">📄</a></li>
+              <li>A. Di Giorgio, P. Sobocinski, N. Voorneveld - <em>Parametric Iteration in Resource Theories</em>. (Accepted at) <strong>CSL 2026</strong> <a class="link" href="https://www.arxiv.org/abs/2510.23413">📄</a></li>
+              <li>F. Bonchi, C.J. Cioffo, A. Di Giorgio, E. Di Lavore - <em>Tape Diagrams for Monoidal Monads</em>. <strong>CALCO 2025</strong> <a class="link" href="https://doi.org/10.4230/LIPIcs.CALCO.2025.11">📄</a></li>
+              <li>A. Di Giorgio, D. R. Ghica, F. Zanasi - <em>Rewriting for Traced Monoidal Closed Categories</em>. <strong>ICGT 2025</strong> <a class="link" href="https://doi.org/10.1007/978-3-031-94706-3_2">📄</a></li>
+              <li>F. Bonchi, A. Di Giorgio, E. Di Lavore - <em>A Diagrammatic Algebra for Program Logics</em>. <strong>FoSSaCS 2025</strong> <a class="link" href="https://doi.org/10.1007/978-3-031-90897-2_15">📄</a></li>
+              <li>F. Bonchi, A. Di Giorgio, D. Trotta - <em>When Lawvere meets Peirce: an equational presentation of boolean hyperdoctrines</em>. <strong>MFCS 2024</strong> <a class="link" href="https://doi.org/10.4230/LIPIcs.MFCS.2024.30">📄</a></li>
+              <li>A. Di Giorgio - <em>Diagrammatic Algebras of Relations</em>. <strong>PhD Thesis</strong> <a class="link" href="https://hdl.handle.net/20.500.14242/215361">📄</a> </li>
+              <li>F. Bonchi, A. Di Giorgio, N. Haydon and P. Sobocinski - <em>Diagrammatic Algebra of First Order Logic</em>. <strong>LICS 2024</strong> <a class="link" href="https://dl.acm.org/doi/10.1145/3661814.3662078">📄</a></li>
+              <li>F. Bonchi, A. Di Giorgio and A. Santamaria - <em>Deconstructing the Calculus of Relations with Tape Diagrams</em>. <strong>POPL 2023</strong> <a class="link" href="https://dl.acm.org/doi/10.1145/3571257">📄</a></li>
+              <li>F. Bonchi, A. Di Giorgio and P. Sobocinski - <em>Diagrammatic Polyhedral Algebra</em>. <strong>FSTTCS 2021</strong> <a class="link" href="https://drops.dagstuhl.de/opus/volltexte/2021/15551/pdf/LIPIcs-FSTTCS-2021-40.pdf">📄</a></li>
+              <li>F. Bonchi, A. Di Giorgio and F. Zanasi - <em>From Farkas' Lemma to Linear Programming: an Exercise in Diagrammatic Algebra</em>. <strong>CALCO 2021</strong> <a class="link" href="https://drops.dagstuhl.de/opus/volltexte/2021/15364/pdf/LIPIcs-CALCO-2021-9.pdf">📄</a></li>
+              <li>A. Di Giorgio and M. Danelutto - <em>Backus FP revisited: A parallel perspective on modern multicores</em>. <strong>ParCo 2019</strong> <a class="link" href="https://ebooks.iospress.nl/doi/10.3233/APC200073">📄</a></li>
+            </ul>
+            <p>See also my <a class="link" href="https://scholar.google.com/citations?user=oDV0G4QAAAAJ">Google Scholar</a> profile</p>
+            <hr>
+            <h2 class="section-title">Preprints</h2>
+            <ul class="list">
+              <li>F. Bonchi, A. Di Giorgio, E. Di Lavore - <em>A Diagrammatic Basis for Computer Programming</em>. <a class="link" href="https://arxiv.org/abs/2512.07240">📄</a></li>
+              <li>F. Bonchi, A. Di Giorgio, N. Haydon, P. Sobocinski - <em>The Calculus of Neo-Peircean Relations</em>. <a class="link" href="https://arxiv.org/abs/2505.05306">📄</a></li>
+              <li>F. Bonchi, A. Di Giorgio, D. Trotta - <em>On Boolean Hyperdoctrines and Peircean Bicategories</em>. <a class="link" href="">📄</a></li>
+            </ul>
+          </section>
+        </div>
+      </div>
+
+    </div>
+
+    <footer>
+      <p>&copy; 2024 Alessandro Di Giorgio</p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  </body>
+</html>
