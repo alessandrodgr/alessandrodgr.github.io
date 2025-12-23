@@ -367,6 +367,13 @@ ul.ruled a:visited {
 	margin: 0 0 0 230px;
 }
 
+#hshot {
+	float: left; 
+	max-width: 25%; 
+	margin: 0 1rem 1rem 0; 
+	border-radius: 6px;
+}
+
 /* Appended responsive rules */
 
 
@@ -422,6 +429,15 @@ ul.ruled a:visited {
 	#contentarea {
 		margin-left: 0 !important;
 		width: auto !important;
+	}
+
+	#hshot {
+		float: none !important;
+		/* max-width: 100% !important; */
+		max-width: 40%;
+		display: block;
+  		margin: 0 auto;
+		margin-bottom: 20px;
 	}
 }
 
