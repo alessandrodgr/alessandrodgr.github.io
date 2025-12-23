@@ -431,14 +431,13 @@ ul.ruled a:visited {
 		width: auto !important;
 	}
 
-	#hshot {
+	/* #hshot {
 		float: none !important;
-		/* max-width: 100% !important; */
 		max-width: 40%;
 		display: block;
   		margin: 0 auto;
 		margin-bottom: 20px;
-	}
+	} */
 }
 
 /* Additional small-screen fine-tuning */
