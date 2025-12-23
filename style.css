@@ -157,22 +157,22 @@ li.ruled a:hover {
 
 a {
 	text-decoration: none;
-	color: yellowgreen;
-	border-bottom: 1px dotted yellowgreen;
+	color: yellow;
+	border-bottom: 1px dotted yellow;
 	padding-bottom: 1px;
 }
 
 a:hover {
-	border-bottom: 1px dotted yellowgreen;
+	border-bottom: 1px dotted yellow;
 	padding-bottom: 1px;
 	color: #5a00cc !important;
-	background-color: yellowgreen;
+	background-color: yellow;
 }
 
 a:visited {
 	text-decoration: none;
-	color: yellowgreen;
-	border-bottom: 1px dotted yellowgreen;
+	color: yellow;
+	border-bottom: 1px dotted yellow;
 	padding-bottom: 1px;
 }
 
@@ -187,7 +187,7 @@ h1 a:hover {
 	border: none;
 	text-decoration: none;
 	color: #333333;
-	background: yellowgreen;
+	background: yellow;
 }
 
 h1 a:visited {
@@ -209,7 +209,7 @@ h2 a:hover, h3 a:hover {
 	border: none;
 	text-decoration: none;
 	color: #333333;
-	background: yellowgreen;
+	background: yellow;
 	border-bottom: 1px solid #333333;
 	padding-bottom: 2px;
 }
@@ -232,7 +232,7 @@ h1.header a:hover {
 	border: none;
 	text-decoration: none;
 	color: #333333;
-	background: yellowgreen;
+	background: yellow;
 }
 
 h1.header a:visited {
@@ -251,7 +251,7 @@ ul.ruled a:hover {
 	border: none;
 	text-decoration: none;
 	color: #ffffff;
-	background: yellowgreen;
+	background: yellow;
 }
 
 ul.ruled a:visited {
@@ -299,7 +299,7 @@ ul.ruled a:visited {
 }
 
 #navbar a:hover {
-	background: yellowgreen;
+	background: yellow;
 	border: none;
 	color: #5a00cc;
 	display: block;
