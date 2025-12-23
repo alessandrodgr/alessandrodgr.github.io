@@ -2,8 +2,8 @@
 
 body {
 	background-attachment: fixed;
-	background-color: #5A00CC;
-	color: #ffffff;
+	background-color: #FFFFFF;
+	color: #333333;
 	font-family: "Roboto", sans-serif;
 	font-size: 18px;
 	line-height: 26px;
@@ -21,13 +21,13 @@ body {
 /* ------------------------------------------------- */
 
 p {	
-	color: #fff;
+	color: #333;
 	margin: 0 0 12px 0;
 	white-space: normal;
 }
 
 p.small {
-	color: #ffffff;
+	color: #333333;
 	font-size: 12px;
 	line-height: 18px;
 	margin: 0 0 12px 0;
@@ -35,7 +35,7 @@ p.small {
 }
 
 p.date {
-	color: #ffffff;
+	color: #333333;
 	font-size: 12px;
 	line-height: 18px;
 	margin: 0 0 12px 0;
@@ -43,7 +43,7 @@ p.date {
 }
 
 p.footer {
-	color: #ffffff;
+	color: #333333;
 	font-size: 12px;
 	line-height: 18px;
 	margin: 40px 0 12px 0;
@@ -51,8 +51,8 @@ p.footer {
 }
 
 h1.header {
-	border-top: 1px solid #ffffff;
-	color: #ffffff;
+	border-top: 1px solid #5A00CC;
+	color: #5A00CC;
 	font-size: 18px;
 	font-weight: bold;
 	line-height: 26px;
@@ -61,8 +61,8 @@ h1.header {
 }
 
 h1.header2 {
-	border-top: 1px solid #ffffff;
-	color: #ffffff;
+	border-top: 1px solid #000000;
+	color: #000000;
 	font-size: 18px;	
 	font-weight: bold;
 	line-height: 26px;
@@ -71,7 +71,7 @@ h1.header2 {
 }
 
 h1 {
-	color: #ffffff;
+	color: #000000;
 	font-size: 18px;
 	font-weight: 700;
 	line-height: 26px;
@@ -80,7 +80,7 @@ h1 {
 }
 
 h1.pullquote {
-	color: #ffffff;
+	color: #000000;
 	font-size: 22px;	
 	line-height: 26px;
 	margin: 0 0 20px 0;
@@ -89,7 +89,7 @@ h1.pullquote {
 }
 
 h2 {
-	color: #ffffff;
+	color: #5A00CC;
 	font-size: 18px;
 	line-height: 26px;
 	margin: 16px 0 3px 0;
@@ -101,7 +101,7 @@ h3 {
 	line-height: 26px;
 	margin: 16px 0 3px 16px;
 	font-weight: normal;
-	color: #ffffff;
+	color: #5A00CC;
 }
 
 h4 {
@@ -109,9 +109,9 @@ h4 {
 	line-height: 26px;
 	margin: 0 0 20px 0;
 	padding: 4px 0 0 0;
-	border-top: 1px solid #ffffff;
+	border-top: 1px solid #5A00CC;
 	font-weight: bold;
-	color: #ffffff;
+	color: #5A00CC;
 }
 
 ul {	
@@ -125,30 +125,32 @@ li.space {
 	padding: 0 0 8px 0;
 }
 
+li.download {
+	list-style-position: inside;
+	list-style: square;
+	/*list-style-image: url(<img src="" width="" height="" />);*/
+	margin: 0 0 16px;
+	font-size: 14px;
+	line-height: 18px;
+}
+
 ul.ruled {
-	border-bottom: 1px solid #eeeeee;
+	border-bottom: 1px solid #666666;
 	font-weight: normal;
 	font-size: 18px;
 	line-height: 24px;
 	list-style-type: none;
-	color: #eeeeee;
+	color: #666666;
 	margin: 0;
 	display: block;
 }
 
 li.ruled {
-	border-top: 1px solid #eeeeee;
-	padding: 8px 0 8px 0;
-	color: #eeeeee;
+	border-top: 1px solid #666666;
+	padding: 3px 0 0 0;
+	margin: 0 0 2px 0;
+	color: #666666;
 	display: block;
-}
-
-li.ruled a {
-	color: #eeeeee !important;
-}
-
-li.ruled a:hover {
-	color: #5a00cc !important;
 }
 
 
@@ -157,22 +159,23 @@ li.ruled a:hover {
 
 a {
 	text-decoration: none;
-	color: yellowgreen;
-	border-bottom: 1px dotted yellowgreen;
+	color: #336699;
+	border-bottom: 1px dotted #003366;
 	padding-bottom: 1px;
 }
 
 a:hover {
-	border-bottom: 1px dotted yellowgreen;
+	color: #000000;
+	border-bottom: 1px dotted #003366;
 	padding-bottom: 1px;
-	color: #5a00cc !important;
-	background-color: yellowgreen;
+	color: #000000;
+	background-color: #eeeeee;
 }
 
 a:visited {
 	text-decoration: none;
-	color: yellowgreen;
-	border-bottom: 1px dotted yellowgreen;
+	color: #336699;
+	border-bottom: 1px dotted #003366;
 	padding-bottom: 1px;
 }
 
@@ -187,7 +190,7 @@ h1 a:hover {
 	border: none;
 	text-decoration: none;
 	color: #333333;
-	background: yellowgreen;
+	background: #EEEEEE;
 }
 
 h1 a:visited {
@@ -199,8 +202,8 @@ h1 a:visited {
 h2 a, h3 a {
 	border: none;
 	text-decoration: none;
-	color: #ffffff;
-	border-bottom: 1px solid #ffffff;
+	color: #5A00CC;
+	border-bottom: 1px solid #5A00CC;
 	padding-bottom: 2px;
 	background: none;
 }
@@ -209,7 +212,7 @@ h2 a:hover, h3 a:hover {
 	border: none;
 	text-decoration: none;
 	color: #333333;
-	background: yellowgreen;
+	background: #EEEEEE;
 	border-bottom: 1px solid #333333;
 	padding-bottom: 2px;
 }
@@ -217,28 +220,28 @@ h2 a:hover, h3 a:hover {
 h2 a:visited, h3 a:visited {
 	border: none;
 	text-decoration: none;
-	color: #ffffff;
-	border-bottom: 1px solid #ffffff;
+	color: #5A00CC;
+	border-bottom: 1px solid #5A00CC;
 	padding-bottom: 2px;
 }
 
 h1.header a {
 	border: none;
 	text-decoration: none;
-	color: #ffffff;
+	color: #5A00CC;
 }
 
 h1.header a:hover {
 	border: none;
 	text-decoration: none;
 	color: #333333;
-	background: yellowgreen;
+	background: #EEEEEE;
 }
 
 h1.header a:visited {
 	border: none;
 	text-decoration: none;
-	color: #ffffff;
+	color: #5A00CC;
 }
 
 ul.ruled a {
@@ -250,14 +253,19 @@ ul.ruled a {
 ul.ruled a:hover {
 	border: none;
 	text-decoration: none;
-	color: #ffffff;
-	background: yellowgreen;
+	color: #000000;
+	background: #EEEEEE;
 }
 
 ul.ruled a:visited {
 	border: none;
 	text-decoration: none;
 	color: #666666;
+}
+
+li.download a {
+	border-bottom: 1px solid #CCCCCC;
+	color: #333333;
 }
 
 /* Modifiers */
@@ -274,18 +282,18 @@ ul.ruled a:visited {
 /* ------------------------------------------------- */
 
 #navbar ul {
-	border-bottom: 1px solid #ffffff;
+	border-bottom: 1px solid #5A00CC;
 	font-weight: normal;
 	font-size: 18px;
 	line-height: 26px;
 	list-style-type: none;
-	color: #ffffff;
+	color: #5A00CC;
 	margin: 0;
 	display: block;
 }
 
 #navbar li {
-	border-top: 1px solid #ffffff;
+	border-top: 1px solid #5A00CC;
 	padding: 4px 0 0 0;
 	margin: 0 0 2px 0;
 	display: block;
@@ -293,29 +301,29 @@ ul.ruled a:visited {
 
 #navbar a {
 	text-decoration: none;
-	color: #ffffff;
+	color: #5A00CC;
 	border: none;
 	display: block;
 }
 
 #navbar a:hover {
-	background: yellowgreen;
+	background: #eeeeee;
 	border: none;
-	color: #5a00cc;
+	color: #5A00CC;
 	display: block;
 }
 
 #navbar a:active {
-	background: #5A00CC;
+	background: #ffffff;
 	border: none;
-	color: #ffffff;
+	color: #5A00CC;
 	display: block;
 }
 
 #navbar a:visited {
 	text-decoration: none;
 	border: none;
-	color: #ffffff;
+	color: #5A00CC;
 	display: block;
 }
 	
@@ -330,7 +338,7 @@ ul.ruled a:visited {
 }
 
 #topleft {
-	background: #5A00CC;
+	background: #FFFFFF;
 	float: left;
 	height: 90px;
 	margin: 0;
@@ -340,7 +348,7 @@ ul.ruled a:visited {
 }
 
 #topmiddle {
-	background: #5A00CC;
+	background: #FFFFFF;
 	float: left;
 	height: 90px;
 	margin: 0 0 0 230px;
@@ -353,7 +361,7 @@ ul.ruled a:visited {
 	width: 200px;
 	height: 100%;
 	position: fixed;
-	background: #5A00CC;
+	background: #FFFFFF;
 	margin: 120px 0 0 0;
 	padding: 10px 10px 20px 20px;
 }
@@ -363,6 +371,6 @@ ul.ruled a:visited {
 	height: 100%;
 	padding: 10px 20px 20px 10px;
 	float: left;
-	background: #5A00CC;
+	background: #FFFFFF;
 	margin: 0 0 0 230px;
 }
