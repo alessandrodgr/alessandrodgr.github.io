@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VisualE — string diagram editor for first-order bicategories</title>
+<style>
+  :root{
+    --bg:#111111; --panel:#1c1c1c; --border:rgba(243,243,243,.16); --ink:#f3f3f3;
+    --accent:#3b82f6; --err:#f59e0b; --muted:rgba(243,243,243,.55);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,'Segoe UI',sans-serif;background:var(--bg);color:var(--ink);height:100vh;display:flex;flex-direction:column;overflow:hidden}
+  header{padding:10px 18px;border-bottom:1px solid var(--border);background:var(--panel);display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+  header h1{font-size:19px;margin:0;font-family:'STIX Two Math',Georgia,serif;letter-spacing:.01em}
+  header h1 .q{font-size:1.2em;font-weight:600}
+  header .sub{color:var(--muted);font-size:12px}
+  #app{flex:1;display:grid;grid-template-columns:250px 1fr 400px;min-height:0}
+  .col{min-height:0;overflow-y:auto;padding:12px;border-right:1px solid var(--border)}
+  .col:last-child{border-right:none}
+  h2{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:14px 0 6px}
+  h2:first-child{margin-top:0}
+  /* legend */
+  table.legend{width:100%;border-collapse:collapse;font-size:12.5px}
+  table.legend th{text-align:left;font-weight:normal;color:var(--muted);font-size:10.5px;text-transform:lowercase;letter-spacing:.04em;padding:2px 4px 4px;border-bottom:1px solid var(--border)}
+  table.legend td{padding:3.5px 4px;border-bottom:1px solid rgba(243,243,243,.06)}
+  table.legend td:nth-child(2){color:var(--muted)}
+  table.legend code{background:rgba(243,243,243,.09);padding:1px 6px;border-radius:3px;font-size:11.5px;color:var(--ink)}
+  /* signature */
+  table.sig{width:100%;border-collapse:collapse;font-size:13px}
+  table.sig td{padding:2px 3px}
+  table.sig input{width:100%;border:1px solid var(--border);border-radius:4px;padding:2px 5px;font-size:13px;background:var(--bg);color:var(--ink)}
+  table.sig input.num{width:34px;text-align:center}
+  table.sig .del{cursor:pointer;color:var(--muted);border:none;background:none;font-size:14px}
+  table.sig .del:hover{color:var(--err)}
+  #addSym{margin-top:4px;font-size:12px;background:none;border:1px dashed var(--border);border-radius:6px;padding:3px 10px;cursor:pointer;color:var(--muted)}
+  #addSym:hover{color:var(--accent);border-color:var(--accent)}
+  select,textarea{font-family:ui-monospace,'SF Mono',Menlo,monospace}
+  select{width:100%;padding:4px;border:1px solid var(--border);border-radius:6px;background:var(--panel);color:var(--ink);font-size:12px}
+  .help{font-size:11.5px;color:var(--muted);line-height:1.55}
+  .help code{background:rgba(243,243,243,.09);padding:0 4px;border-radius:3px;font-size:11px}
+  /* center */
+  #center{display:flex;flex-direction:column;min-height:0;padding:0}
+  #termIn{width:100%;border:none;border-bottom:1px solid var(--border);padding:12px 14px;font-size:15px;resize:none;height:74px;background:var(--panel);color:var(--ink);outline:none}
+  #errBar{padding:5px 14px;font-size:12.5px;min-height:26px;color:var(--err);background:rgba(245,158,11,.08);border-bottom:1px solid var(--border);display:none}
+  #errBar.ok{display:block;background:rgba(59,130,246,.1);color:var(--accent)}
+  #errBar.bad{display:block}
+  #canvas{flex:1;overflow:auto;display:flex;align-items:center;justify-content:center;background:
+    repeating-conic-gradient(#161616 0% 25%, #1b1b1b 0% 50%) 0 0/22px 22px}
+  #canvas svg{margin:30px}
+  #viewbar{display:flex;gap:12px;align-items:center;padding:6px 14px;border-top:1px solid var(--border);background:var(--panel);font-size:12px;color:var(--muted)}
+  #viewbar input[type=range]{width:130px}
+  /* output */
+  #tikzOut{width:100%;flex:1;min-height:280px;border:1px solid var(--border);border-radius:8px;padding:10px;font-size:11.5px;line-height:1.45;background:var(--panel);color:var(--ink);white-space:pre;resize:none;outline:none}
+  .row{display:flex;gap:8px;align-items:center;margin:8px 0;flex-wrap:wrap}
+  .row label{font-size:12.5px}
+  .btn{background:var(--accent);color:#fff;border:none;border-radius:6px;padding:6px 13px;cursor:pointer;font-size:12.5px}
+  .btn.sec{background:var(--panel);color:var(--ink);border:1px solid var(--border)}
+  .btn:hover{opacity:.85}
+  #outCol{display:flex;flex-direction:column;min-height:0}
+  .radio{font-size:12.5px;display:flex;gap:10px}
+  #copied{color:var(--accent);font-size:12px;opacity:0;transition:opacity .3s}
+  ::placeholder{color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <h1><span class="q">∀</span>isual<span class="q">∃</span></h1>
+  <span class="sub">string diagram editor for first-order bicategories</span>
+</header>
+<div id="app">
+
+  <div class="col" id="left">
+    <h2>Syntax</h2>
+    <table class="legend">
+      <thead><tr><th>term</th><th>type</th><th>command</th></tr></thead>
+      <tbody>
+        <tr><td>empty</td><td>0 → 0</td><td><code>empty</code></td></tr>
+        <tr><td>identity</td><td>1 → 1</td><td><code>id</code></td></tr>
+        <tr><td>copier</td><td>1 → 2</td><td><code>copy</code></td></tr>
+        <tr><td>discharger</td><td>1 → 0</td><td><code>disc</code></td></tr>
+        <tr><td>cocopier</td><td>2 → 1</td><td><code>cocopy</code></td></tr>
+        <tr><td>codischarger</td><td>0 → 1</td><td><code>codisc</code></td></tr>
+        <tr><td>symmetry</td><td>2 → 2</td><td><code>swap</code></td></tr>
+      </tbody>
+    </table>
+    <table class="legend" style="margin-top:12px">
+      <thead><tr><th>operation</th><th>command</th></tr></thead>
+      <tbody>
+        <tr><td>composition</td><td><code>;</code></td></tr>
+        <tr><td>tensor</td><td><code>*</code></td></tr>
+        <tr><td>negation</td><td><code>~</code></td></tr>
+        <tr><td>dagger</td><td><code>'</code></td></tr>
+      </tbody>
+    </table>
+    <h2>Signature</h2>
+    <table class="sig"><tbody id="sigBody"></tbody></table>
+    <button id="addSym">+ add symbol</button>
+  </div>
+
+  <div class="col" id="center">
+    <textarea id="termIn" spellcheck="false" placeholder="write a term, e.g.   codisc ; ~((id * codisc) ; ~R)"></textarea>
+    <div id="errBar"></div>
+    <div id="canvas"></div>
+    <div id="viewbar">
+      <label>zoom <input type="range" id="zoom" min="25" max="140" value="62"></label>
+      <button class="btn sec" id="dlSvg">download SVG</button>
+    </div>
+  </div>
+
+  <div class="col" id="outCol">
+    <h2>TikZ export</h2>
+    <div class="radio">
+      <label><input type="radio" name="fmt" value="tikzit" checked> TikZiT fragment (paper styles)</label>
+      <label><input type="radio" name="fmt" value="standalone"> standalone .tex</label>
+    </div>
+    <textarea id="tikzOut" readonly spellcheck="false"></textarea>
+    <div class="row">
+      <button class="btn" id="copyBtn">Copy</button>
+      <button class="btn sec" id="dlBtn">Download</button>
+      <span id="copied">copied ✓</span>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* ================= model =================
+   Terms: {k:'gen',name} | {k:'box',name,op} | {k:'seq',cs} | {k:'par',cs} | {k:'neg',c}
+   Geometry: y-up, TikZ cm units. SLOT = wire pitch.
+*/
+const SLOT = 0.75, BOXPITCH = 0.5, SEQGAP = 0.4, NEG_H = 0.45, NEG_WIRE = 0.25, NEG_VPAD = 0.25, NEG_VGAP = 0.1;
+
+const GENS = {
+  id:{n:1,m:1}, empty:{n:0,m:0}, copy:{n:1,m:2}, disc:{n:1,m:0},
+  cocopy:{n:2,m:1}, codisc:{n:0,m:1}, swap:{n:2,m:2}
+};
+const ALIAS = {discard:'disc', codiscard:'codisc', sym:'swap', dup:'copy'};
+
+/* ---------- tokenizer / parser ---------- */
+function tokenize(src){
+  const ts=[]; let i=0;
+  while(i<src.length){
+    const c=src[i];
+    if(/\s/.test(c)){i++;continue;}
+    if(';*~()\''.includes(c)){ts.push({t:c,pos:i});i++;continue;}
+    if(c==='⊗'){ts.push({t:'*',pos:i});i++;continue;}   // ⊗
+    if(c==='¬'){ts.push({t:'~',pos:i});i++;continue;}   // ¬
+    const m=/^[A-Za-z_][A-Za-z0-9_]*/.exec(src.slice(i));
+    if(m){ts.push({t:'name',v:m[0],pos:i});i+=m[0].length;continue;}
+    throw {msg:`unexpected character “${c}”`,pos:i};
+  }
+  return ts;
+}
+function parse(src){
+  const ts=tokenize(src); let p=0;
+  const peek=()=>ts[p], eat=t=>{ if(!ts[p]||ts[p].t!==t) throw {msg:`expected “${t}”`,pos:ts[p]?ts[p].pos:src.length}; return ts[p++]; };
+  function atom(){
+    const tk=peek();
+    if(!tk) throw {msg:'unexpected end of term',pos:src.length};
+    if(tk.t==='('){eat('(');const e=expr();eat(')');return e;}
+    if(tk.t==='~'){eat('~');return {k:'neg',c:atomPost(),pos:tk.pos};}
+    if(tk.t==='name'){
+      p++;
+      let nm=ALIAS[tk.v]||tk.v;
+      if(GENS[nm]) return {k:'gen',name:nm,pos:tk.pos};
+      return {k:'box',name:tk.v,op:false,pos:tk.pos};
+    }
+    throw {msg:`unexpected “${tk.t}”`,pos:tk.pos};
+  }
+  function atomPost(){
+    let a=atom();
+    while(peek()&&peek().t==="'"){
+      const q=eat("'");
+      if(a.k!=='box') throw {msg:'′ (op) applies only to signature symbols',pos:q.pos};
+      a={...a,op:!a.op};
+    }
+    return a;
+  }
+  function tens(){
+    const cs=[atomPost()];
+    while(peek()&&peek().t==='*'){eat('*');cs.push(atomPost());}
+    return cs.length===1?cs[0]:{k:'par',cs};
+  }
+  function expr(){
+    const cs=[tens()];
+    while(peek()&&peek().t===';'){eat(';');cs.push(tens());}
+    return cs.length===1?cs[0]:{k:'seq',cs};
+  }
+  const e=expr();
+  if(p<ts.length) throw {msg:`unexpected “${ts[p].t==='name'?ts[p].v:ts[p].t}”`,pos:ts[p].pos};
+  return e;
+}
+
+/* ---------- typecheck ---------- */
+function typecheck(node,sig,added){
+  switch(node.k){
+    case 'gen': node.n=GENS[node.name].n; node.m=GENS[node.name].m; break;
+    case 'box':{
+      let s=sig.find(s=>s.name===node.name);
+      if(!s){ s={name:node.name,n:1,m:1,auto:true}; sig.push(s); added.push(node.name); }
+      node.n=node.op?s.m:s.n; node.m=node.op?s.n:s.m; break;
+    }
+    case 'seq':
+      node.cs.forEach(c=>typecheck(c,sig,added));
+      for(let i=0;i+1<node.cs.length;i++)
+        if(node.cs[i].m!==node.cs[i+1].n)
+          throw {msg:`type error in “;”: left side has ${node.cs[i].m} output wire(s) but right side expects ${node.cs[i+1].n}`,pos:node.cs[i+1].pos};
+      node.n=node.cs[0].n; node.m=node.cs[node.cs.length-1].m; break;
+    case 'par':
+      node.cs.forEach(c=>typecheck(c,sig,added));
+      node.n=node.cs.reduce((a,c)=>a+c.n,0); node.m=node.cs.reduce((a,c)=>a+c.m,0); break;
+    case 'neg':
+      typecheck(node.c,sig,added); node.n=node.c.n; node.m=node.c.m; break;
+  }
+  if(node.pos===undefined&&node.cs) node.pos=node.cs[0].pos;
+  if(node.pos===undefined&&node.c) node.pos=node.c.pos;
+  return node;
+}
+function collectNames(node,set){
+  set=set||new Set();
+  if(node.k==='box') set.add(node.name);
+  if(node.cs) node.cs.forEach(c=>collectNames(c,set));
+  if(node.c) collectNames(node.c,set);
+  return set;
+}
+
+/* ---------- measure ---------- */
+const offs=(k,pitch)=>Array.from({length:k},(_,i)=>((k-1)/2-i)*pitch);
+const boxW=lbl=>Math.max(0.55,0.28+0.17*lbl.length);
+
+function measure(node){
+  switch(node.k){
+    case 'gen':{
+      const g=GENS[node.name];
+      const dims={ id:[0.6,0.75], empty:[0.6,0.75], copy:[1.15,1.5], disc:[0.75,0.75],
+                   cocopy:[1.15,1.5], codisc:[0.75,0.75], swap:[1.1,1.5] };
+      [node.natW,node.h]=dims[node.name];
+      node.lo=offs(g.n,SLOT); node.ro=offs(g.m,SLOT); break;
+    }
+    case 'box':{
+      const k=Math.max(node.n,node.m,1);
+      node.bw=boxW(node.name); node.bh=Math.max(0.55,(k-1)*BOXPITCH+0.42);
+      node.natW=node.bw+0.3; node.h=node.bh+0.35;
+      node.lo=offs(node.n,BOXPITCH); node.ro=offs(node.m,BOXPITCH); break;
+    }
+    case 'seq':{
+      node.cs.forEach(measure);
+      node.gaps=[];
+      let w=0;
+      node.cs.forEach((c,i)=>{
+        w+=c.natW;
+        if(i+1<node.cs.length){
+          const a=c.ro,b=node.cs[i+1].lo;
+          const same=a.length===b.length&&a.every((v,j)=>Math.abs(v-b[j])<1e-6);
+          const gap=(a.length===0||same)?0:SEQGAP;
+          node.gaps.push(gap); w+=gap;
+        }
+      });
+      node.natW=w; node.h=Math.max(...node.cs.map(c=>c.h));
+      node.lo=node.cs[0].lo; node.ro=node.cs[node.cs.length-1].ro; break;
+    }
+    case 'par':{
+      node.cs.forEach(measure);
+      node.natW=Math.max(...node.cs.map(c=>c.natW));
+      node.h=node.cs.reduce((a,c)=>a+c.h,0);
+      node.bc=[]; let cum=0;
+      node.lo=[]; node.ro=[];
+      node.cs.forEach(c=>{
+        const bc=node.h/2-cum-c.h/2; node.bc.push(bc); cum+=c.h;
+        node.lo.push(...c.lo.map(o=>o+bc)); node.ro.push(...c.ro.map(o=>o+bc));
+      });
+      break;
+    }
+    case 'neg':
+      measure(node.c);
+      node.natW=node.c.natW+2*NEG_H;
+      node.h=node.c.h+2*(NEG_VPAD+NEG_VGAP);
+      node.lo=node.c.lo; node.ro=node.c.ro; break;
+  }
+}
+
+/* ---------- place: emit display-list primitives ---------- */
+function place(node,x,cy,w,pol,P,depth){
+  const flip=p=>p==='+'?'-':'+';
+  const wire=(x1,y1,x2,y2,opt)=>P.push({t:'wire',pol,x1,y1,x2,y2,...(opt||{})});
+  const cx=x+w/2;
+  switch(node.k){
+    case 'gen':
+      switch(node.name){
+        case 'id': wire(x,cy,x+w,cy); break;
+        case 'empty': break;
+        case 'copy':{
+          const d={x:cx-0.25,y:cy};
+          P.push({t:'dot',x:d.x,y:d.y,pol});
+          wire(x,cy,d.x,d.y);
+          wire(d.x,d.y,cx+0.25,cy+0.375,{out:55,in:180,fromDot:true});
+          wire(d.x,d.y,cx+0.25,cy-0.375,{out:-55,in:180,fromDot:true});
+          wire(cx+0.25,cy+0.375,x+w,cy+0.375);
+          wire(cx+0.25,cy-0.375,x+w,cy-0.375);
+          break;
+        }
+        case 'cocopy':{
+          const d={x:cx+0.25,y:cy};
+          P.push({t:'dot',x:d.x,y:d.y,pol});
+          wire(d.x,d.y,x+w,cy,{fromDot:true});
+          wire(cx-0.25,cy+0.375,d.x,d.y,{out:0,in:125,toDot:true});
+          wire(cx-0.25,cy-0.375,d.x,d.y,{out:0,in:-125,toDot:true});
+          wire(x,cy+0.375,cx-0.25,cy+0.375);
+          wire(x,cy-0.375,cx-0.25,cy-0.375);
+          break;
+        }
+        case 'disc':
+          P.push({t:'dot',x:cx+0.25,y:cy,pol});
+          wire(x,cy,cx+0.25,cy,{toDot:true});
+          break;
+        case 'codisc':
+          P.push({t:'dot',x:cx-0.25,y:cy,pol});
+          wire(cx-0.25,cy,x+w,cy,{fromDot:true});
+          break;
+        case 'swap':
+          wire(x,cy+0.375,x+w,cy-0.375,{out:0,in:180});
+          wire(x,cy-0.375,x+w,cy+0.375,{out:0,in:180});
+          break;
+      }
+      break;
+    case 'box':{
+      P.push({t:'box',cx,cy,bw:node.bw,bh:node.bh,label:node.name,pol,op:node.op,
+              k:Math.max(node.n,node.m,1)});
+      node.lo.forEach(o=>wire(x,cy+o,cx-node.bw/2,cy+o,{toBox:true}));
+      node.ro.forEach(o=>wire(cx+node.bw/2,cy+o,x+w,cy+o,{fromBox:true}));
+      break;
+    }
+    case 'seq':{
+      const extra=(w-node.natW)/node.cs.length;
+      let xx=x;
+      node.cs.forEach((c,i)=>{
+        const cw=c.natW+extra;
+        place(c,xx,cy,cw,pol,P,depth);
+        xx+=cw;
+        if(i+1<node.cs.length){
+          const gap=node.gaps[i];
+          if(gap>0){
+            const a=c.ro,b=node.cs[i+1].lo;
+            a.forEach((o,j)=>wire(xx,cy+o,xx+gap,cy+b[j],{out:0,in:180}));
+            xx+=gap;
+          }
+        }
+      });
+      break;
+    }
+    case 'par':
+      node.cs.forEach((c,i)=>place(c,x,cy+node.bc[i],w,pol,P,depth));
+      break;
+    case 'neg':{
+      const ix1=x+NEG_WIRE, ix2=x+w-NEG_WIRE;
+      const iy1=cy-node.c.h/2-NEG_VPAD, iy2=cy+node.c.h/2+NEG_VPAD;
+      P.push({t:'bg',x1:ix1,y1:iy1,x2:ix2,y2:iy2,pol:flip(pol),depth:depth+1});
+      const chx=x+NEG_H, chw=w-2*NEG_H;
+      // pass-through stubs (outer polarity outside the inner rect, inner inside)
+      node.lo.forEach(o=>{
+        wire(x,cy+o,ix1,cy+o);
+        P.push({t:'wire',pol:flip(pol),x1:ix1,y1:cy+o,x2:chx,y2:cy+o});
+      });
+      node.ro.forEach(o=>{
+        P.push({t:'wire',pol:flip(pol),x1:chx+chw,y1:cy+o,x2:ix2,y2:cy+o});
+        wire(ix2,cy+o,x+w,cy+o);
+      });
+      place(node.c,chx,cy,chw,flip(pol),P,depth+1);
+      break;
+    }
+  }
+}
+
+/* fuse wire chains through degree-2 junctions (composition seams) so a
+   stub–connector–stub run becomes one smooth curve and the seam nodes vanish.
+   Never fuses: at dots, across polarity boundaries, or two curved wires
+   (so e.g. swap;swap keeps both crossings). */
+function mergeWires(P){
+  const key=(x,y)=>Math.round(x*1e4)+'|'+Math.round(y*1e4);
+  const dotK=new Set(P.filter(p=>p.t==='dot').map(p=>key(p.x,p.y)));
+  const rest=P.filter(p=>p.t!=='wire');
+  let wires=P.filter(p=>p.t==='wire');
+  const isH=w=>w.out===undefined&&Math.abs(w.y1-w.y2)<1e-6;
+  const isS=w=>w.out===0&&w.in===180&&!w.loose;
+  let changed=true;
+  while(changed){
+    changed=false;
+    const ins=new Map(), outs=new Map();
+    const add=(m,k,w)=>{const a=m.get(k);a?a.push(w):m.set(k,[w]);};
+    for(const w of wires){ add(outs,key(w.x1,w.y1),w); add(ins,key(w.x2,w.y2),w); }
+    for(const a of wires){
+      const J=key(a.x2,a.y2);
+      if(dotK.has(J))continue;
+      const i=ins.get(J), o=outs.get(J)||[];
+      if(!i||i.length!==1||o.length!==1)continue;
+      const b=o[0];
+      if(a===b||a.pol!==b.pol)continue;
+      if(!(isH(a)||isS(a))||!(isH(b)||isS(b)))continue;
+      if(!isH(a)&&!isH(b))continue;   // never fuse two curves
+      const m={t:'wire',pol:a.pol,x1:a.x1,y1:a.y1,x2:b.x2,y2:b.y2};
+      if(Math.abs(m.y1-m.y2)>1e-6){m.out=0;m.in=180;}
+      wires=wires.filter(u=>u!==a&&u!==b);
+      wires.push(m);
+      changed=true;
+      break;
+    }
+  }
+  return rest.concat(wires);
+}
+
+function layout(root,outerPol){
+  // a top-level negation has nothing else in the outer region:
+  // draw it directly as a diagram of the opposite colour
+  let pol=outerPol;
+  if(root.k==='neg'){ root=root.c; pol=pol==='+'?'-':'+'; }
+  measure(root);
+  const P=[];
+  place(root,0,0,root.natW,pol,P,0);
+  const H=root.h/2+0.15;
+  P.push({t:'bg',x1:0,y1:-H,x2:root.natW,y2:H,pol,depth:0});
+  return {prims:mergeWires(P),bbox:{x1:0,y1:-H,x2:root.natW,y2:H}};
+}
+
+/* ---------- SVG renderer ---------- */
+function bez(x1,y1,x2,y2,out_,in_,loose){
+  const d=Math.hypot(x2-x1,y2-y1), r=0.3993*d*(loose||1);
+  const rad=a=>a*Math.PI/180;
+  return [x1+r*Math.cos(rad(out_)), y1+r*Math.sin(rad(out_)),
+          x2+r*Math.cos(rad(in_)),  y2+r*Math.sin(rad(in_))];
+}
+function renderSVG(L,scalePx){
+  const S=scalePx, pad=8;
+  const {x1,y1,x2,y2}=L.bbox;
+  const W=(x2-x1)*S+2*pad, H=(y2-y1)*S+2*pad;
+  const X=x=>(x-x1)*S+pad, Y=y=>(y2-y)*S+pad;   // y flip
+  const colB=p=>p==='+'?'#000':'#fff';
+  let out=`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`;
+  const bgs=L.prims.filter(p=>p.t==='bg').sort((a,b)=>a.depth-b.depth);
+  for(const b of bgs){
+    const fill=b.pol==='+'?'#ffffff':'#000000';
+    const stroke=b.pol==='+'?'#c8c3b6':'none';
+    out+=`<rect x="${X(b.x1)}" y="${Y(b.y2)}" width="${(b.x2-b.x1)*S}" height="${(b.y2-b.y1)*S}" fill="${fill}" ${b.depth===0&&b.pol==='+'?`stroke="${stroke}" stroke-width="1"`:''}/>`;
+  }
+  const lw=Math.max(1.2,S*0.028);
+  for(const p of L.prims){
+    if(p.t!=='wire')continue;
+    let d;
+    if(p.out===undefined) d=`M ${X(p.x1)} ${Y(p.y1)} L ${X(p.x2)} ${Y(p.y2)}`;
+    else{
+      const [c1x,c1y,c2x,c2y]=bez(p.x1,p.y1,p.x2,p.y2,p.out,p.in,p.loose);
+      d=`M ${X(p.x1)} ${Y(p.y1)} C ${X(c1x)} ${Y(c1y)}, ${X(c2x)} ${Y(c2y)}, ${X(p.x2)} ${Y(p.y2)}`;
+    }
+    out+=`<path d="${d}" fill="none" stroke="${colB(p.pol)}" stroke-width="${lw}" stroke-linecap="round"/>`;
+  }
+  for(const p of L.prims){
+    if(p.t==='dot')
+      out+=`<circle cx="${X(p.x)}" cy="${Y(p.y)}" r="${Math.max(2.4,S*0.055)}" fill="${colB(p.pol)}"/>`;
+    else if(p.t==='box'){
+      const ch=0.13*S;
+      const bx=X(p.cx-p.bw/2), by=Y(p.cy+p.bh/2), bw=p.bw*S, bh=p.bh*S;
+      // chamfer NE (normal) or NW (op)
+      const pts = p.op
+        ? [[bx+ch,by],[bx+bw,by],[bx+bw,by+bh],[bx,by+bh],[bx,by+ch]]
+        : [[bx,by],[bx+bw-ch,by],[bx+bw,by+ch],[bx+bw,by+bh],[bx,by+bh]];
+      const fill=p.pol==='+'?'#fff':'#000', st=p.pol==='+'?'#000':'#fff';
+      out+=`<polygon points="${pts.map(q=>q.join(',')).join(' ')}" fill="${fill}" stroke="${st}" stroke-width="${lw}"/>`;
+      out+=`<text x="${X(p.cx)}" y="${Y(p.cy)}" text-anchor="middle" dominant-baseline="central" font-family="STIX Two Math, Georgia, serif" font-style="italic" font-size="${S*0.3}" fill="${st}">${escXml(p.label)}</text>`;
+    }
+  }
+  return out+'</svg>';
+}
+const escXml=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+/* ---------- TikZ exporter (TikZiT format, paper styles) ---------- */
+function fmtN(v){ let s=(Math.round(v*1000)/1000).toString(); return s==='-0'?'0':s; }
+function renderTikZ(L){
+  const nodes=[], edges=[];
+  let nid=0;
+  const coordMap=new Map(), dotMap=new Map();
+  const key=(x,y)=>fmtN(x)+','+fmtN(y);
+  const noneNode=(x,y)=>{
+    const k=key(x,y);
+    if(dotMap.has(k)) return dotMap.get(k);        // wire endpoint on a dot
+    if(coordMap.has(k)) return coordMap.get(k);
+    const id=nid++;
+    nodes.push(`\t\t\\node [style=none] (${id}) at (${fmtN(x)}, ${fmtN(y)}) {};`);
+    const ref=`(${id}.center)`;
+    coordMap.set(k,ref); return ref;
+  };
+  // dots and boxes first (so wires can attach to dot nodes)
+  for(const p of L.prims){
+    if(p.t==='dot'){
+      const id=nid++;
+      nodes.push(`\t\t\\node [style={dotStyle/${p.pol}}] (${id}) at (${fmtN(p.x)}, ${fmtN(p.y)}) {};`);
+      dotMap.set(key(p.x,p.y),`(${id})`);
+    }else if(p.t==='box'){
+      const id=nid++;
+      const style=p.op?`boxOpStyle/${p.pol}`:`boxStyle/${p.pol}`;
+      const mh=p.k>1?`, minimum height=${fmtN(1.4+0.9*(p.k-1))}em`:'';
+      nodes.push(`\t\t\\node [{${style}}${mh}] (${id}) at (${fmtN(p.cx)}, ${fmtN(p.cy)}) {$${p.label}$};`);
+    }
+  }
+  // backgrounds: outermost first
+  const bgs=L.prims.filter(p=>p.t==='bg').sort((a,b)=>a.depth-b.depth);
+  for(const b of bgs){
+    const c1=noneNode(b.x1,b.y2), c2=noneNode(b.x1,b.y1), c3=noneNode(b.x2,b.y1), c4=noneNode(b.x2,b.y2);
+    edges.push(`\t\t\\draw [{bgStyle/${b.pol}}] ${c4}\n\t\t\t to ${c3}\n\t\t\t to ${c2}\n\t\t\t to ${c1}\n\t\t\t to cycle;`);
+  }
+  for(const p of L.prims){
+    if(p.t!=='wire')continue;
+    if(Math.abs(p.x1-p.x2)<1e-9&&Math.abs(p.y1-p.y2)<1e-9)continue;
+    const a=noneNode(p.x1,p.y1), b=noneNode(p.x2,p.y2);
+    let opt='';
+    if(p.out!==undefined){
+      opt=`, out=${fmtN(p.out)}, in=${fmtN(p.in)}`;
+      if(p.loose)opt+=`, looseness=${fmtN(p.loose)}`;
+    }
+    edges.push(`\t\t\\draw [{wStyle/${p.pol}}${opt}] ${a} to ${b};`);
+  }
+  return `\\begin{tikzpicture}\n\t\\begin{pgfonlayer}{nodelayer}\n${nodes.join('\n')}\n\t\\end{pgfonlayer}\n\t\\begin{pgfonlayer}{edgelayer}\n${edges.join('\n')}\n\t\\end{pgfonlayer}\n\\end{tikzpicture}`;
+}
+
+const STANDALONE_PRE=String.raw`\documentclass[margin=2mm]{standalone}
+\usepackage{tikz}
+\usetikzlibrary{shapes.misc, calc}
+\pgfdeclarelayer{edgelayer}
+\pgfdeclarelayer{nodelayer}
+\pgfsetlayers{edgelayer,nodelayer,main}
+% ---- styles from lcb.tikzstyles (Bonchi, Di Giorgio, Haydon, Sobocinski) ----
+\tikzstyle{none}=[inner sep=0pt]
+\tikzstyle{label}=[fill=none, draw=none, shape=circle, scale=0.7]
+\tikzstyle{black}=[fill=black, draw=black, shape=circle, inner sep=0pt, minimum size=3pt]
+\tikzstyle{white}=[fill=white, draw=white, shape=circle, inner sep=0pt, minimum size=3pt]
+\tikzstyle{whiteBox}=[fill=white, draw=black, chamfered rectangle, chamfered rectangle corners={north east}, chamfered rectangle sep=2pt, inner sep=0pt, minimum height=1.4em, minimum width=1.4em, scale=0.8]
+\tikzstyle{blackBox}=[fill=black, draw=white, chamfered rectangle, chamfered rectangle corners={north east}, chamfered rectangle sep=2pt, inner sep=0pt, minimum height=1.4em, minimum width=1.4em, text=white, scale=0.8]
+\tikzstyle{whiteBoxOp}=[fill=white, draw=black, chamfered rectangle, chamfered rectangle corners={north west}, chamfered rectangle sep=2pt, inner sep=0pt, minimum height=1.4em, minimum width=1.4em, scale=0.8]
+\tikzstyle{blackBoxOp}=[fill=black, draw=white, chamfered rectangle, chamfered rectangle corners={north west}, chamfered rectangle sep=2pt, inner sep=0pt, minimum height=1.4em, minimum width=1.4em, text=white, scale=0.8]
+\tikzstyle{blackWire}=[-]
+\tikzstyle{whiteWire}=[-, draw=white, line width=0.2mm]
+\tikzstyle{blackBg}=[-, fill=black, draw=black]
+\tikzstyle{whiteBg}=[-, fill=white, line width=0.001mm]
+\tikzset{dotStyle/.cd, +/.style={black}, -/.style={white}}
+\tikzset{bgStyle/.cd, +/.style={whiteBg}, -/.style={blackBg}}
+\tikzset{wStyle/.cd, +/.style={blackWire}, -/.style={whiteWire}}
+\tikzset{boxStyle/.cd, +/.style={whiteBox}, -/.style={blackBox}}
+\tikzset{boxOpStyle/.cd, +/.style={whiteBoxOp}, -/.style={blackBoxOp}}
+\begin{document}
+`;
+
+/* ================= UI ================= */
+const $=id=>document.getElementById(id);
+const state=loadState();
+
+function loadState(){
+  try{
+    const s=JSON.parse(localStorage.getItem('npr-tool')||'{}');
+    // v2 migration: flag likely typing-artifact symbols (unedited 1→1, non-default) as inferred
+    if(s.sig&&!s.v){
+      const defaults=['R','f','g','P','c'];
+      s.sig.forEach(e=>{ if(!defaults.includes(e.name)&&e.n===1&&e.m===1) e.auto=true; });
+    }
+    return {
+      term: s.term ?? 'codisc ; ~((id * codisc) ; ~R)',
+      sig: s.sig ?? [{name:'R',n:2,m:0},{name:'f',n:1,m:1},{name:'g',n:2,m:1},{name:'P',n:1,m:0},{name:'c',n:0,m:1}],
+      zoom: s.zoom ?? 62,
+      fmt: s.fmt ?? 'tikzit'
+    };
+  }catch(e){ return {term:'codisc ; ~((id * codisc) ; ~R)',sig:[{name:'R',n:2,m:0},{name:'f',n:1,m:1}],zoom:62,fmt:'tikzit'}; }
+}
+function saveState(){
+  localStorage.setItem('npr-tool',JSON.stringify({
+    v:2, term:$('termIn').value, sig:state.sig,
+    zoom:+$('zoom').value, fmt:document.querySelector('input[name=fmt]:checked').value
+  }));
+}
+
+
+function renderSig(flash){
+  const tb=$('sigBody'); tb.innerHTML='';
+  state.sig.forEach((s,i)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td><input value="${s.name}" data-i="${i}" data-f="name"></td>
+      <td><input class="num" type="number" min="0" value="${s.n}" data-i="${i}" data-f="n"></td>
+      <td style="color:var(--muted)">→</td>
+      <td><input class="num" type="number" min="0" value="${s.m}" data-i="${i}" data-f="m"></td>
+      <td><button class="del" data-i="${i}" title="remove">✕</button></td>`;
+    if(flash&&flash.includes(s.name)) tr.style.background='rgba(245,158,11,.18)';
+    if(s.auto){ tr.style.opacity=.55; tr.title='inferred from the term — edit to keep'; }
+    tb.appendChild(tr);
+  });
+}
+$('sigBody').addEventListener('input',ev=>{
+  const i=+ev.target.dataset.i, f=ev.target.dataset.f;
+  delete state.sig[i].auto;   // user touched it: keep it
+  if(f==='name') state.sig[i].name=ev.target.value.trim();
+  else state.sig[i][f]=Math.max(0,+ev.target.value||0);
+  update(); saveState();
+});
+$('sigBody').addEventListener('click',ev=>{
+  if(ev.target.classList.contains('del')){
+    state.sig.splice(+ev.target.dataset.i,1);
+    renderSig(); update(); saveState();
+  }
+});
+$('addSym').onclick=()=>{
+  let base='S',i=1,nm=base;
+  while(state.sig.some(s=>s.name===nm)) nm=base+(i++);
+  state.sig.push({name:nm,n:1,m:1}); renderSig(); update(); saveState();
+};
+
+let lastTikz='', lastSvg='';
+function update(){
+  const src=$('termIn').value;
+  const err=$('errBar');
+  if(!src.trim()){
+    $('canvas').innerHTML='<div style="color:var(--muted);font-size:13px">empty term — write something</div>';
+    err.className='';err.style.display='none';
+    $('tikzOut').value='';
+    return;
+  }
+  try{
+    const ast=parse(src);
+    // drop inferred (auto) symbols no longer referenced by the term
+    const used=collectNames(ast);
+    const before=state.sig.length;
+    state.sig=state.sig.filter(s=>!s.auto||used.has(s.name));
+    const added=[];
+    typecheck(ast,state.sig,added);
+    if(added.length||state.sig.length!==before){renderSig(added);saveState();}
+    const L=layout(ast,'+');
+    lastSvg=renderSVG(L,+$('zoom').value);
+    $('canvas').innerHTML=lastSvg;
+    const frag=renderTikZ(L);
+    const fmt=document.querySelector('input[name=fmt]:checked').value;
+    lastTikz=fmt==='standalone'?STANDALONE_PRE+frag+'\n\\end{document}\n':frag;
+    $('tikzOut').value=lastTikz;
+    err.className='ok';
+    err.textContent=`✓  type: ${ast.n} → ${ast.m}`;
+  }catch(ex){
+    err.className='bad';
+    err.textContent=(ex.msg||String(ex))+(ex.pos!==undefined?`   (at position ${ex.pos+1})`:'');
+    if(ex instanceof Error) console.error(ex);
+  }
+}
+
+$('termIn').addEventListener('input',()=>{update();saveState();});
+$('zoom').addEventListener('input',update);
+document.querySelectorAll('input[name=fmt]').forEach(r=>r.addEventListener('change',()=>{update();saveState();}));
+
+$('copyBtn').onclick=async()=>{
+  await navigator.clipboard.writeText(lastTikz);
+  $('copied').style.opacity=1;
+  setTimeout(()=>$('copied').style.opacity=0,1200);
+};
+function download(name,text,mime){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([text],{type:mime}));
+  a.download=name; a.click(); URL.revokeObjectURL(a.href);
+}
+$('dlBtn').onclick=()=>{
+  const fmt=document.querySelector('input[name=fmt]:checked').value;
+  download(fmt==='standalone'?'diagram.tex':'diagram.tikz',lastTikz,'text/plain');
+};
+$('dlSvg').onclick=()=>download('diagram.svg',lastSvg,'image/svg+xml');
+
+/* init */
+renderSig();
+$('termIn').value=state.term;
+$('zoom').value=state.zoom;
+document.querySelector(`input[name=fmt][value=${state.fmt}]`).checked=true;
+update();
+</script>
+</body>
+</html>
