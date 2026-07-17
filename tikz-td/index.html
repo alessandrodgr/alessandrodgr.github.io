@@ -1,0 +1,1510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>tikz-td — tape diagram editor for Kleene-Cartesian rig categories</title>
+<style>
+  :root{
+    --bg:#111111; --panel:#1c1c1c; --border:rgba(243,243,243,.16); --ink:#f3f3f3;
+    --accent:#AFE1AF; --err:#f87171; --muted:rgba(243,243,243,.55);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,'Segoe UI',sans-serif;background:var(--bg);color:var(--ink);height:100vh;display:flex;flex-direction:column;overflow:hidden}
+  header{padding:10px 18px;border-bottom:1px solid var(--border);background:var(--panel);display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+  header h1{font-size:19px;margin:0;font-family:'STIX Two Math',Georgia,serif;letter-spacing:.01em}
+  header h1 .q{color:var(--accent);font-weight:600}
+  header .sub{color:var(--muted);font-size:12px}
+  #app{flex:1;display:grid;grid-template-columns:265px 1fr 400px;min-height:0}
+  .col{min-height:0;overflow-y:auto;padding:12px;border-right:1px solid var(--border)}
+  .col:last-child{border-right:none}
+  h2{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:14px 0 6px}
+  h2:first-child{margin-top:0}
+  table.legend{width:100%;border-collapse:collapse;font-size:12.5px}
+  table.legend th{text-align:left;font-weight:normal;color:var(--muted);font-size:10.5px;text-transform:lowercase;letter-spacing:.04em;padding:2px 4px 4px;border-bottom:1px solid var(--border)}
+  table.legend td{padding:3.5px 4px;border-bottom:1px solid rgba(243,243,243,.06)}
+  table.legend td:nth-child(1){color:var(--muted)}
+  table.legend code{background:rgba(243,243,243,.09);padding:1px 6px;border-radius:3px;font-size:11.5px;color:var(--ink)}
+  table.sig{width:100%;border-collapse:collapse;font-size:13px}
+  table.sig td{padding:2px 3px}
+  table.sig input{width:100%;border:1px solid var(--border);border-radius:4px;padding:2px 5px;font-size:13px;background:var(--bg);color:var(--ink)}
+  table.sig input.word{width:56px;text-align:center}
+  table.sig .del{cursor:pointer;color:var(--muted);border:none;background:none;font-size:14px}
+  table.sig .del:hover{color:var(--err)}
+  #addSym{margin-top:4px;font-size:12px;background:none;border:1px dashed var(--border);border-radius:6px;padding:3px 10px;cursor:pointer;color:var(--muted)}
+  #addSym:hover{color:var(--accent);border-color:var(--accent)}
+  select,textarea{font-family:ui-monospace,'SF Mono',Menlo,monospace}
+  .help{font-size:11.5px;color:var(--muted);line-height:1.55}
+  .help code{background:rgba(243,243,243,.09);padding:0 4px;border-radius:3px;font-size:11px;cursor:pointer}
+  .help code:hover{color:var(--accent)}
+  #center{display:flex;flex-direction:column;min-height:0;padding:0}
+  #termIn{width:100%;border:none;border-bottom:1px solid var(--border);padding:12px 14px;font-size:15px;resize:none;height:74px;background:var(--panel);color:var(--ink);outline:none}
+  #errBar{padding:5px 14px;font-size:12.5px;min-height:26px;color:var(--err);background:rgba(245,158,11,.08);border-bottom:1px solid var(--border);display:none}
+  #errBar.ok{display:block;background:rgba(248,113,113,.1);color:var(--accent)}
+  #errBar.bad{display:block}
+  #canvas{flex:1;overflow:auto;display:flex;align-items:center;justify-content:center;background:
+    repeating-conic-gradient(#f7f5f0 0% 25%, #edeae2 0% 50%) 0 0/22px 22px}
+  #canvas svg{margin:30px}
+  #viewbar{display:flex;gap:12px;align-items:center;padding:6px 14px;border-top:1px solid var(--border);background:var(--panel);font-size:12px;color:var(--muted)}
+  #viewbar input[type=range]{width:130px}
+  #tikzOut{width:100%;flex:1;min-height:280px;border:1px solid var(--border);border-radius:8px;padding:10px;font-size:11.5px;line-height:1.45;background:var(--panel);color:var(--ink);white-space:pre;resize:none;outline:none}
+  .row{display:flex;gap:8px;align-items:center;margin:8px 0;flex-wrap:wrap}
+  .row label{font-size:12.5px}
+  .btn{background:var(--accent);color:#310909;border:none;border-radius:6px;padding:6px 13px;cursor:pointer;font-size:12.5px;font-weight:600}
+  .btn.sec{background:var(--panel);color:var(--ink);border:1px solid var(--border);font-weight:normal}
+  .btn:hover{opacity:.85}
+  #outCol{display:flex;flex-direction:column;min-height:0}
+  .radio{font-size:12.5px;display:flex;gap:10px}
+  #copied{color:var(--accent);font-size:12px;opacity:0;transition:opacity .3s}
+  ::placeholder{color:var(--muted)}
+  label.chk{font-size:12px;display:flex;gap:5px;align-items:center}
+</style>
+</head>
+<body>
+<header>
+  <h1>tikz-td</h1>
+  <span class="sub">tape diagram editor for Kleene-Cartesian rig categories</span>
+</header>
+<div id="app">
+
+  <div class="col" id="left">
+    <h2>Tape layer</h2>
+    <table class="legend">
+      <tbody>
+        <tr><td>circuit in a tape</td><td><code>[ c ]</code></td></tr>
+        <tr><td>composition</td><td><code>;</code></td></tr>
+        <tr><td>⊕-tensor</td><td><code>+</code></td></tr>
+        <tr><td>identity</sub></i></td><td><code>id(U)</code>, <code>id0</code></td></tr>
+        <tr><td>symmetry</td><td><code>swap(U,V)</code></td></tr>
+        <tr><td>diagonal</td><td><code>copy(U)</code></td></tr>
+        <tr><td>bang</td><td><code>disc(U)</code></td></tr>
+        <tr><td>codiagonal</td><td><code>cocopy(U)</code></td></tr>
+        <tr><td>cobang</td><td><code>codisc(U)</code></td></tr>
+        <tr><td>trace<sub>U</sub></td><td><code>tr(U){t}</code></td></tr>
+        <tr><td>Kleene star</td><td><code>star(t)</code></td></tr>
+      </tbody>
+    </table>
+    <h2>Circuit layer (inside [ ])</h2>
+    <table class="legend">
+      <tbody>
+        <tr><td>composition</td><td><code>;</code></td></tr>
+        <tr><td>⊗-tensor</td><td><code>*</code></td></tr>
+        <tr><td>identity</td><td><code>id(A)</code>, <code>id1</code></td></tr>
+        <tr><td>symmetry</td><td><code>swap(A,B)</code></td></tr>
+        <tr><td>copier</td><td><code>copy(A)</code></td></tr>
+        <tr><td>discharger</td><td><code>disc(A)</code></td></tr>
+        <tr><td>cocopier</td><td><code>cocopy(A)</code></td></tr>
+        <tr><td>codischarger</td><td><code>codisc(A)</code></td></tr>
+        <tr><td>dagger</td><td><code>c'</code></td></tr>
+      </tbody>
+    </table>
+    <!-- <div class="help" style="margin-top:8px">
+      Words: sorts separated by spaces, e.g. <code>id(A B)</code>; <code>1</code> is the empty word.
+      A bare generator at tape level is sugar for <code>[f]</code>.
+      Click an example: <br>
+      <code>copy(A) ; ([f] + [g]) ; cocopy(A)</code><br>
+      <code>star([f])</code><br>
+      <code>tr(A){ swap(A, A) }</code><br>
+      <code>[copy(A) ; (f * id(A)) ; R]</code><br>
+      <code>copy(A B) ; (id(A B) + [swap(A,B)])</code><br>
+      <code>disc(A) + codisc(B)</code>
+    </div> -->
+    <h2>Signature</h2>
+    <table class="sig"><tbody id="sigBody"></tbody></table>
+    <button id="addSym">+ add symbol</button>
+  </div>
+
+  <div class="col" id="center">
+    <textarea id="termIn" spellcheck="false" placeholder="write a tape term, e.g.   copy(A) ; ([f] + star([g])) ; cocopy(A)"></textarea>
+    <div id="errBar"></div>
+    <div id="canvas"></div>
+    <div id="viewbar">
+      <label>zoom <input type="range" id="zoom" min="18" max="90" value="46"></label>
+      <label class="chk"><input type="checkbox" id="labelsChk" checked> labels</label>
+      <span id="boxScaleUI" style="display:none;align-items:center;gap:6px">
+        box <b id="bsName" style="font-family:Georgia,serif;font-style:italic"></b>
+        <input type="range" id="bsRange" min="60" max="260" value="100" style="width:110px">
+        <button class="btn sec" id="bsReset" style="padding:2px 8px">reset</button>
+      </span>
+      <button class="btn sec" id="dlSvg">download SVG</button>
+    </div>
+  </div>
+
+  <div class="col" id="outCol">
+    <h2>TikZ export</h2>
+    <div class="radio">
+      <label><input type="radio" name="fmt" value="tikzit" checked> fragment (paper styles)</label>
+      <label><input type="radio" name="fmt" value="standalone"> standalone .tex</label>
+    </div>
+    <textarea id="tikzOut" readonly spellcheck="false"></textarea>
+    <div class="row">
+      <button class="btn" id="copyBtn">Copy</button>
+      <button class="btn sec" id="dlBtn">Download</button>
+      <span id="copied">copied ✓</span>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* =====================================================================
+   Tape diagrams for Kleene-Cartesian rig categories (arXiv:2512.07240).
+   Two-layer terms, grammar (7.1) / Table 5 of the paper:
+     circuits c (inside tapes)  : words over sorts  ->  words
+     tapes    t                 : polynomials (lists of words) -> polynomials
+   Geometry: y-up, TikZ units as in the paper (every picture scale=0.25).
+   Wire pitch inside a tape = 0.5; band height = 0.5k+0.3.
+   ===================================================================== */
+const GAP=0.45;               // vertical gap between stacked bands
+const CSEQGAP=0.45;           // circuit-level connector width
+/* Bands have a fixed height per wire count; embedded circuits are scaled
+   (boxes squeezed vertically via CSQ) to fit inside, never the other way. */
+const bandH=k=>k>0?0.5*k+0.3:0.5;
+const wireOffs=k=>Array.from({length:k},(_,i)=>((k-1)/2-i)*0.5);
+let CSQ=1;                    // vertical squeeze applied to circuit boxes
+let BOXSC={};                 // per-occurrence user box scale (click a box to set)
+
+const KEYWORDS=new Set(['id','id0','id1','swap','copy','disc','cocopy','codisc','tr','star']);
+const ALIAS={discard:'disc',codiscard:'codisc',sym:'swap',dup:'copy',bang:'disc',cobang:'codisc',merge:'cocopy'};
+
+/* ---------------- tokenizer / parser ---------------- */
+function tokenize(src){
+  const ts=[];let i=0;
+  while(i<src.length){
+    const c=src[i];
+    if(/\s/.test(c)){i++;continue;}
+    if(';+*(),[]{}\''.includes(c)){ts.push({t:c,pos:i});i++;continue;}
+    if(c==='⊕'){ts.push({t:'+',pos:i});i++;continue;}
+    if(c==='⊗'){ts.push({t:'*',pos:i});i++;continue;}
+    const m=/^[A-Za-z0-9_]+/.exec(src.slice(i));
+    if(m){ts.push({t:'name',v:m[0],pos:i});i+=m[0].length;continue;}
+    throw {msg:`unexpected character “${c}”`,pos:i};
+  }
+  return ts;
+}
+function parse(src){
+  const ts=tokenize(src);let p=0;
+  const peek=()=>ts[p];
+  const eat=t=>{if(!ts[p]||ts[p].t!==t)throw {msg:`expected “${t}”`,pos:ts[p]?ts[p].pos:src.length};return ts[p++];};
+  const isName=v=>peek()&&peek().t==='name'&&(v===undefined||peek().v===v);
+
+  function word(){            // sorts separated by spaces or *
+    const sorts=[];
+    if(isName('1')){p++;return sorts;}
+    while(isName()){
+      sorts.push(peek().v);p++;
+      if(peek()&&peek().t==='*')p++;
+    }
+    if(!sorts.length)throw {msg:'expected a word (sorts separated by spaces, or 1)',pos:peek()?peek().pos:src.length};
+    return sorts;
+  }
+  function args1(){eat('(');const u=word();eat(')');return u;}
+  function args2(){eat('(');const u=word();eat(',');const v=word();eat(')');return [u,v];}
+
+  /* ----- circuit layer ----- */
+  function cAtom(){
+    const tk=peek();
+    if(!tk)throw {msg:'unexpected end of term',pos:src.length};
+    if(tk.t==='('){eat('(');const e=cSeq();eat(')');return e;}
+    if(tk.t==='name'){
+      const nm=ALIAS[tk.v]||tk.v;
+      if(nm==='id1'){p++;return {k:'cid1',pos:tk.pos};}
+      if(nm==='id'){p++;const u=args1();return {k:'cid',word:u,pos:tk.pos};}
+      if(nm==='swap'){p++;const [u,v]=args2();return {k:'cswap',u,v,pos:tk.pos};}
+      if(['copy','disc','cocopy','codisc'].includes(nm)){
+        p++;const u=args1();
+        return {k:'c'+nm,word:u,pos:tk.pos};
+      }
+      p++;return {k:'box',name:tk.v,op:false,pos:tk.pos};
+    }
+    throw {msg:`unexpected “${tk.t}” in circuit`,pos:tk.pos};
+  }
+  function cPost(){
+    let a=cAtom();
+    while(peek()&&peek().t==="'"){
+      const q=eat("'");
+      if(a.k!=='box')throw {msg:'′ (converse) applies only to signature symbols',pos:q.pos};
+      a={...a,op:!a.op};
+    }
+    return a;
+  }
+  function cPar(){
+    const cs=[cPost()];
+    while(peek()&&peek().t==='*'){eat('*');cs.push(cPost());}
+    return cs.length===1?cs[0]:{k:'cpar',cs,pos:cs[0].pos};
+  }
+  function cSeq(){
+    const cs=[cPar()];
+    while(peek()&&peek().t===';'){eat(';');cs.push(cPar());}
+    return cs.length===1?cs[0]:{k:'cseq',cs,pos:cs[0].pos};
+  }
+
+  /* ----- tape layer ----- */
+  function tAtom(){
+    const tk=peek();
+    if(!tk)throw {msg:'unexpected end of term',pos:src.length};
+    if(tk.t==='('){eat('(');const e=tSeq();eat(')');return e;}
+    if(tk.t==='['){eat('[');const c=cSeq();eat(']');return {k:'tcirc',c,pos:tk.pos};}
+    if(tk.t==='name'){
+      const nm=ALIAS[tk.v]||tk.v;
+      if(nm==='id0'){p++;return {k:'tid0',pos:tk.pos};}
+      if(nm==='id1'){p++;return {k:'tid',word:[],pos:tk.pos};}
+      if(nm==='id'){p++;const u=args1();return {k:'tid',word:u,pos:tk.pos};}
+      if(nm==='swap'){p++;const [u,v]=args2();return {k:'tswap',u,v,pos:tk.pos};}
+      if(['copy','disc','cocopy','codisc'].includes(nm)){
+        p++;const u=args1();return {k:'t'+nm,word:u,pos:tk.pos};
+      }
+      if(nm==='tr'){
+        p++;eat('(');const u=word();
+        let body;
+        if(peek()&&peek().t===','){eat(',');body=tSeq();eat(')');}
+        else {eat(')');eat('{');body=tSeq();eat('}');}
+        return {k:'ttr',u,c:body,pos:tk.pos};
+      }
+      if(nm==='star'){p++;eat('(');const body=tSeq();eat(')');return {k:'tstar',c:body,pos:tk.pos};}
+      p++;
+      let b={k:'box',name:tk.v,op:false,pos:tk.pos};
+      while(peek()&&peek().t==="'"){eat("'");b={...b,op:!b.op};}
+      return {k:'tcirc',c:b,pos:tk.pos};   // bare generator ⇒ [f]
+    }
+    throw {msg:`unexpected “${tk.t}”`,pos:tk.pos};
+  }
+  function tSum(){
+    const cs=[tAtom()];
+    while(peek()&&peek().t==='+'){eat('+');cs.push(tAtom());}
+    return cs.length===1?cs[0]:{k:'tsum',cs,pos:cs[0].pos};
+  }
+  function tSeq(){
+    const cs=[tSum()];
+    while(peek()&&peek().t===';'){eat(';');cs.push(tSum());}
+    return cs.length===1?cs[0]:{k:'tseq',cs,pos:cs[0].pos};
+  }
+
+  const e=tSeq();
+  if(p<ts.length)throw {msg:`unexpected “${ts[p].t==='name'?ts[p].v:ts[p].t}”`,pos:ts[p].pos};
+  return e;
+}
+
+/* ---------------- pretty printing ---------------- */
+const prettyWord=w=>w.length===0?'1':(w.every(s=>s.length===1)?w.join(''):w.join('⊗'));
+const prettyPoly=P=>P.length===0?'0':P.map(prettyWord).join(' ⊕ ');
+const wordEq=(a,b)=>a.length===b.length&&a.every((s,i)=>s===b[i]);
+const polyEq=(a,b)=>a.length===b.length&&a.every((w,i)=>wordEq(w,b[i]));
+
+/* ---------------- typecheck ---------------- */
+function ctypecheck(node,sig,added){
+  switch(node.k){
+    case 'cid1': node.dom=[];node.cod=[];break;
+    case 'cid': node.dom=node.word;node.cod=node.word;break;
+    case 'cswap': node.dom=[...node.u,...node.v];node.cod=[...node.v,...node.u];break;
+    case 'ccopy': node.dom=node.word;node.cod=[...node.word,...node.word];break;
+    case 'cdisc': node.dom=node.word;node.cod=[];break;
+    case 'ccocopy': node.dom=[...node.word,...node.word];node.cod=node.word;break;
+    case 'ccodisc': node.dom=[];node.cod=node.word;break;
+    case 'box':{
+      let s=sig.find(s=>s.name===node.name);
+      if(!s){s={name:node.name,dom:['A'],cod:['A'],auto:true};sig.push(s);added.push(node.name);}
+      node.dom=node.op?s.cod:s.dom;node.cod=node.op?s.dom:s.cod;break;
+    }
+    case 'cseq':
+      node.cs.forEach(c=>ctypecheck(c,sig,added));
+      for(let i=0;i+1<node.cs.length;i++)
+        if(!wordEq(node.cs[i].cod,node.cs[i+1].dom))
+          throw {msg:`type error in “;” (circuit): left side produces ${prettyWord(node.cs[i].cod)} but right side expects ${prettyWord(node.cs[i+1].dom)}`,pos:node.cs[i+1].pos};
+      node.dom=node.cs[0].dom;node.cod=node.cs[node.cs.length-1].cod;break;
+    case 'cpar':
+      node.cs.forEach(c=>ctypecheck(c,sig,added));
+      node.dom=node.cs.flatMap(c=>c.dom);node.cod=node.cs.flatMap(c=>c.cod);break;
+  }
+  return node;
+}
+function ttypecheck(node,sig,added){
+  switch(node.k){
+    case 'tid0': node.dom=[];node.cod=[];break;
+    case 'tid': node.dom=[node.word];node.cod=[node.word];break;
+    case 'tswap': node.dom=[node.u,node.v];node.cod=[node.v,node.u];break;
+    case 'tcopy': node.dom=[node.word];node.cod=[node.word,node.word];break;
+    case 'tdisc': node.dom=[node.word];node.cod=[];break;
+    case 'tcocopy': node.dom=[node.word,node.word];node.cod=[node.word];break;
+    case 'tcodisc': node.dom=[];node.cod=[node.word];break;
+    case 'tcirc':
+      ctypecheck(node.c,sig,added);
+      node.dom=[node.c.dom];node.cod=[node.c.cod];break;
+    case 'ttr':
+      ttypecheck(node.c,sig,added);
+      if(node.c.dom.length===0||!wordEq(node.c.dom[0],node.u))
+        throw {msg:`tr(${prettyWord(node.u)}): body must have domain ${prettyWord(node.u)} ⊕ … but has ${prettyPoly(node.c.dom)}`,pos:node.pos};
+      if(node.c.cod.length===0||!wordEq(node.c.cod[0],node.u))
+        throw {msg:`tr(${prettyWord(node.u)}): body must have codomain ${prettyWord(node.u)} ⊕ … but has ${prettyPoly(node.c.cod)}`,pos:node.pos};
+      node.dom=node.c.dom.slice(1);node.cod=node.c.cod.slice(1);break;
+    case 'tstar':{
+      ttypecheck(node.c,sig,added);
+      if(node.c.dom.length!==1||!polyEq(node.c.dom,node.c.cod))
+        throw {msg:`star(t): t must have type U → U for a single word U, but has ${prettyPoly(node.c.dom)} → ${prettyPoly(node.c.cod)}`,pos:node.pos};
+      const U=node.c.dom[0];
+      // t* = tr_U( ▷_U ; ◁_U ; (t ⊕ id_U) ) — t on the looped branch, id exits,
+      // so the identity path (t⁰) is included
+      const desug={k:'tseq',pos:node.pos,cs:[
+        {k:'tcocopy',word:U,pos:node.pos},
+        {k:'tcopy',word:U,pos:node.pos},
+        {k:'tsum',pos:node.pos,cs:[node.c,{k:'tid',word:U,pos:node.pos}]}]};
+      node.k='ttr';node.u=U;node.c=desug;
+      return ttypecheck(node,sig,added);
+    }
+    case 'tseq':
+      node.cs.forEach(c=>ttypecheck(c,sig,added));
+      for(let i=0;i+1<node.cs.length;i++)
+        if(!polyEq(node.cs[i].cod,node.cs[i+1].dom))
+          throw {msg:`type error in “;”: left side produces ${prettyPoly(node.cs[i].cod)} but right side expects ${prettyPoly(node.cs[i+1].dom)}`,pos:node.cs[i+1].pos};
+      node.dom=node.cs[0].dom;node.cod=node.cs[node.cs.length-1].cod;break;
+    case 'tsum':
+      node.cs.forEach(c=>ttypecheck(c,sig,added));
+      node.dom=node.cs.flatMap(c=>c.dom);node.cod=node.cs.flatMap(c=>c.cod);break;
+  }
+  return node;
+}
+function collectNames(node,set){
+  set=set||new Set();
+  if(node.k==='box')set.add(node.name);
+  if(node.cs)node.cs.forEach(c=>collectNames(c,set));
+  if(node.c)collectNames(node.c,set);
+  return set;
+}
+
+/* =====================================================================
+   Circuit layout (string diagrams inside a tape).
+   Emits into ctx.P: {t:'wire',...} {t:'dot',...} {t:'box',...}
+   ===================================================================== */
+const boxW=lbl=>Math.max(0.85,0.34+0.22*lbl.length);
+/* widest wire cross-section of a circuit (cpar stacks add up) */
+function maxInternalK(node){
+  switch(node.k){
+    case 'cseq': return Math.max(...node.cs.map(maxInternalK));
+    case 'cpar': return node.cs.reduce((a,c)=>a+maxInternalK(c),0);
+    default: return Math.max(node.dom.length,node.cod.length);
+  }
+}
+
+function cmeasure(node){
+  switch(node.k){
+    case 'cid1': node.natW=0.5;node.h=0.35;node.lo=[];node.ro=[];break;
+    case 'cid':{
+      const k=node.word.length;
+      node.natW=0.5;node.h=Math.max(0.35,k*0.5);
+      node.lo=wireOffs(k);node.ro=wireOffs(k);break;
+    }
+    case 'cswap':{
+      const ku=node.u.length,kv=node.v.length,k=ku+kv;
+      node.natW=1.0;node.h=k*0.5;
+      node.lo=wireOffs(k);node.ro=wireOffs(k);break;
+    }
+    case 'ccopy':{
+      const k=node.word.length;
+      node.natW=0.95;node.h=Math.max(1.0,2*k*0.5);
+      node.lo=wireOffs(k);node.ro=wireOffs(2*k);break;
+    }
+    case 'ccocopy':{
+      const k=node.word.length;
+      node.natW=0.95;node.h=Math.max(1.0,2*k*0.5);
+      node.lo=wireOffs(2*k);node.ro=wireOffs(k);break;
+    }
+    case 'cdisc':{
+      const k=node.word.length;
+      node.natW=0.7;node.h=Math.max(0.5,k*0.5);
+      node.lo=wireOffs(k);node.ro=[];break;
+    }
+    case 'ccodisc':{
+      const k=node.word.length;
+      node.natW=0.7;node.h=Math.max(0.5,k*0.5);
+      node.lo=[];node.ro=wireOffs(k);break;
+    }
+    case 'box':{
+      const n=node.dom.length,m=node.cod.length,k=Math.max(n,m,1);
+      const u=(node.occ&&BOXSC[node.occ])||1;
+      node.bw=boxW(node.name)*Math.max(u,1);
+      // user-scaled boxes keep their size (the tape grows around them);
+      // unscaled ones are squeezed to fit the band
+      node.bh=u!==1?Math.max((k-1)*0.5+0.34,((k-1)*0.5+0.6)*u)
+                   :Math.max((k-1)*0.5+0.34,CSQ*((k-1)*0.5+0.6));
+      node.natW=node.bw+0.44;node.h=node.bh+0.12;
+      node.lo=wireOffs(n);node.ro=wireOffs(m);break;
+    }
+    case 'cseq':{
+      node.cs.forEach(cmeasure);
+      node.gaps=[];let w=0;
+      node.cs.forEach((c,i)=>{
+        w+=c.natW;
+        if(i+1<node.cs.length){
+          const a=c.ro,b=node.cs[i+1].lo;
+          const same=a.length===b.length&&a.every((v,j)=>Math.abs(v-b[j])<1e-6);
+          const gap=(a.length===0||same)?0:CSEQGAP;
+          node.gaps.push(gap);w+=gap;
+        }
+      });
+      node.natW=w;node.h=Math.max(...node.cs.map(c=>c.h));
+      node.lo=node.cs[0].lo;node.ro=node.cs[node.cs.length-1].ro;break;
+    }
+    case 'cpar':{
+      node.cs.forEach(cmeasure);
+      node.natW=Math.max(...node.cs.map(c=>c.natW));
+      node.h=node.cs.reduce((a,c)=>a+c.h,0);
+      node.bc=[];let cum=0;
+      node.lo=[];node.ro=[];
+      node.cs.forEach(c=>{
+        const bc=node.h/2-cum-c.h/2;node.bc.push(bc);cum+=c.h;
+        node.lo.push(...c.lo.map(o=>o+bc));node.ro.push(...c.ro.map(o=>o+bc));
+      });
+      break;
+    }
+  }
+}
+function cplace(node,x,cy,w,ctx){
+  const wire=(x1,y1,x2,y2,opt)=>ctx.P.push({t:'wire',x1,y1,x2,y2,...(opt||{})});
+  const cx=x+w/2;
+  switch(node.k){
+    case 'cid1': break;
+    case 'cid': node.lo.forEach(o=>wire(x,cy+o,x+w,cy+o));break;
+    case 'cswap':{
+      const ku=node.u.length,kv=node.v.length,k=ku+kv;
+      const off=wireOffs(k);
+      // block transposition: first ku wires go under/over to the bottom kv positions
+      for(let i=0;i<ku;i++) wire(x,cy+off[i],x+w,cy+off[i+kv],{out:0,in:180});
+      for(let i=0;i<kv;i++) wire(x,cy+off[ku+i],x+w,cy+off[i],{out:0,in:180});
+      break;
+    }
+    case 'ccopy':{
+      const k=node.word.length,lo=node.lo,ro=node.ro;
+      for(let i=0;i<k;i++){
+        const d={x:cx-0.18,y:cy+lo[i]};
+        ctx.P.push({t:'dot',x:d.x,y:d.y});
+        wire(x,cy+lo[i],d.x,d.y);
+        wire(d.x,d.y,x+w,cy+ro[i],{out:55,in:180,fromDot:true});
+        wire(d.x,d.y,x+w,cy+ro[i+k],{out:-55,in:180,fromDot:true});
+      }
+      break;
+    }
+    case 'ccocopy':{
+      const k=node.word.length,lo=node.lo,ro=node.ro;
+      for(let i=0;i<k;i++){
+        const d={x:cx+0.18,y:cy+ro[i]};
+        ctx.P.push({t:'dot',x:d.x,y:d.y});
+        wire(d.x,d.y,x+w,cy+ro[i],{fromDot:true});
+        wire(x,cy+lo[i],d.x,d.y,{out:0,in:125,toDot:true});
+        wire(x,cy+lo[i+k],d.x,d.y,{out:0,in:-125,toDot:true});
+      }
+      break;
+    }
+    case 'cdisc':
+      node.lo.forEach(o=>{
+        ctx.P.push({t:'dot',x:x+w-0.18,y:cy+o});
+        wire(x,cy+o,x+w-0.18,cy+o,{toDot:true});
+      });
+      break;
+    case 'ccodisc':
+      node.ro.forEach(o=>{
+        ctx.P.push({t:'dot',x:x+0.18,y:cy+o});
+        wire(x+0.18,cy+o,x+w,cy+o,{fromDot:true});
+      });
+      break;
+    case 'box':{
+      ctx.P.push({t:'box',cx,cy,bw:node.bw,bh:node.bh,label:node.name,op:node.op,
+                  occ:node.occ,k:Math.max(node.dom.length,node.cod.length,1)});
+      node.lo.forEach(o=>wire(x,cy+o,cx-node.bw/2,cy+o,{toBox:true}));
+      node.ro.forEach(o=>wire(cx+node.bw/2,cy+o,x+w,cy+o,{fromBox:true}));
+      break;
+    }
+    case 'cseq':{
+      const extra=(w-node.natW)/node.cs.length;
+      let xx=x;
+      node.cs.forEach((c,i)=>{
+        const cw=c.natW+extra;
+        cplace(c,xx,cy,cw,ctx);
+        xx+=cw;
+        if(i+1<node.cs.length){
+          const gap=node.gaps[i];
+          if(gap>0){
+            const a=c.ro,b=node.cs[i+1].lo;
+            a.forEach((o,j)=>wire(xx,cy+o,xx+gap,cy+b[j],{out:0,in:180}));
+            xx+=gap;
+          }
+        }
+      });
+      break;
+    }
+    case 'cpar':
+      node.cs.forEach((c,i)=>cplace(c,x,cy+node.bc[i],w,ctx));
+      break;
+  }
+}
+
+/* =====================================================================
+   Tape layout.
+   Emits into ctx.P (wires/dots/boxes) and ctx.B (boundary segments).
+   A boundary segment: {x1,y1,x2,y2 [,out,in,loose]} — TikZ `to` semantics.
+   Ports: node.lp / node.rp = [{off,h,word}] listed top → bottom.
+   ===================================================================== */
+const S=(x1,y1,x2,y2,out_,in_,loose)=>{
+  const s={x1,y1,x2,y2};
+  if(out_!==undefined){s.out=out_;s.in=in_;if(loose)s.loose=loose;}
+  return s;
+};
+const revSeg=s=>({x1:s.x2,y1:s.y2,x2:s.x1,y2:s.y1,
+  ...(s.out!==undefined?{out:s.in,in:s.out}:{}),
+  ...(s.loose?{loose:s.loose}:{})});
+function seg(B,x1,y1,x2,y2,out_,in_,loose){B.push(S(x1,y1,x2,y2,out_,in_,loose));}
+/* Tapes are PAINTED as the union of per-piece fills (ctx.F) — this renders
+   self-crossing bands (yanking) and bands through trace holes correctly with
+   no fill-rule tricks. ctx.B still collects boundary segments, assembled into
+   loops for the borders only. */
+function addFill(ctx,segs){ctx.F.push({segs});}
+function bandExt(ctx,x1,x2,cy,word,h){   // straight band piece
+  if(x2-x1<1e-9)return;
+  h=h??bandH(word.length);
+  const top=S(x1,cy+h/2,x2,cy+h/2),bot=S(x1,cy-h/2,x2,cy-h/2);
+  ctx.B.push(top,bot);
+  addFill(ctx,[top,S(x2,cy+h/2,x2,cy-h/2),revSeg(bot),S(x1,cy-h/2,x1,cy+h/2)]);
+  wireOffs(word.length).forEach(o=>ctx.P.push({t:'wire',x1,y1:cy+o,x2,y2:cy+o}));
+}
+function bandConn(ctx,x1,x2,ya,ha,yb,hb,word){  // S-connector, same word
+  if(Math.abs(ya-yb)<1e-9&&Math.abs(ha-hb)<1e-9){bandExt(ctx,x1,x2,ya,word,ha);return;}
+  const top=S(x1,ya+ha/2,x2,yb+hb/2,0,180,0.75),bot=S(x1,ya-ha/2,x2,yb-hb/2,0,180,0.75);
+  ctx.B.push(top,bot);
+  addFill(ctx,[top,S(x2,yb+hb/2,x2,yb-hb/2),revSeg(bot),S(x1,ya-ha/2,x1,ya+ha/2)]);
+  wireOffs(word.length).forEach(o=>
+    ctx.P.push({t:'wire',x1,y1:ya+o,x2,y2:yb+o,out:0,in:180,loose:0.75}));
+}
+const portsMatch=(pa,pb)=>pa.length===pb.length&&
+  pa.every((p,i)=>Math.abs(p.off-pb[i].off)<1e-6&&Math.abs(p.h-pb[i].h)<1e-6);
+
+/* ---- junction height negotiation ----
+   A wide circuit wants its tall band to extend to its ports; a neighbouring
+   piece that can render a tall band smoothly (a fork's merged side, a cap,
+   an identity ramp, a trace pass-through) adopts that height, so the
+   transition happens inside its own curves instead of as a blister. */
+/* ---- global band-height resolution ----
+   Bands form classes: unified across every junction, through circuit pieces
+   (uniform rectangles), through symmetries, and around trace loops. Each
+   class takes the max height demanded in it (baseline per wire count, hMid
+   for circuit pieces), and forks/sums compute their geometry from the
+   RESOLVED heights — so tapes run straight, and height changes happen only
+   inside pieces that render them smoothly (fork curves, caps, identity
+   ramps, trace pass-throughs). */
+function resolveHeights(root){
+  let nid=0;
+  (function ann(n){
+    n._hid=nid++;
+    if(n.k==='tcirc')return;
+    if(n.cs)n.cs.forEach(ann);
+    else if(n.c)ann(n.c);
+  })(root);
+  const P=new Map();
+  const find=k=>{
+    let r=k;while(P.has(r)&&P.get(r)!==r)r=P.get(r);
+    let c=k;while(P.has(c)&&P.get(c)!==c){const nx=P.get(c);P.set(c,r);c=nx;}
+    if(!P.has(r))P.set(r,r);return r;
+  };
+  const union=(a,b)=>{const ra=find(a),rb=find(b);if(ra!==rb)P.set(ra,rb);};
+  const K=(n,s,i)=>n._hid+':'+s+':'+i;
+  const dem=[];
+  const demand=(k,h)=>dem.push([k,h]);
+  (function walk(n){
+    switch(n.k){
+      case 'tid0':return;
+      case 'tid':
+        union(K(n,'l',0),K(n,'r',0));   // identities conduct height too
+        demand(K(n,'l',0),bandH(n.word.length));return;
+      case 'tcirc':{
+        const hIn=bandH(n.c.dom.length),hOut=bandH(n.c.cod.length);
+        const kMax=maxInternalK(n.c);
+        let hMid=Math.max(hIn,hOut,(kMax-1)*0.5+0.56);
+        CSQ=1;cmeasure(n.c);
+        if(n.c.h>hMid-0.16){
+          CSQ=Math.max(0.5,(hMid-0.16)/n.c.h);
+          cmeasure(n.c);CSQ=1;
+          if(n.c.h>hMid-0.16)hMid=n.c.h+0.16;
+        }
+        union(K(n,'l',0),K(n,'r',0));
+        demand(K(n,'l',0),hMid);return;
+      }
+      case 'tswap':
+        union(K(n,'l',0),K(n,'r',1));union(K(n,'l',1),K(n,'r',0));
+        demand(K(n,'l',0),bandH(n.u.length));
+        demand(K(n,'l',1),bandH(n.v.length));return;
+      case 'tcopy':
+        // forks conduct height: the merged band and both branches share one
+        // class, so a whole connected tape resolves to a uniform thickness
+        union(K(n,'l',0),K(n,'r',0));union(K(n,'r',0),K(n,'r',1));
+        demand(K(n,'l',0),bandH(n.word.length));return;
+      case 'tcocopy':
+        union(K(n,'r',0),K(n,'l',0));union(K(n,'l',0),K(n,'l',1));
+        demand(K(n,'r',0),bandH(n.word.length));return;
+      case 'tdisc':demand(K(n,'l',0),bandH(n.word.length));return;
+      case 'tcodisc':demand(K(n,'r',0),bandH(n.word.length));return;
+      case 'ttr':
+        walk(n.c);
+        union(K(n.c,'l',0),K(n.c,'r',0));   // the loop keeps one height
+        // pass-throughs conduct height: external bands keep the body's
+        // thickness all the way to the ports (no squeeze at the ends)
+        n.dom.forEach((w,i)=>{
+          union(K(n,'l',i),K(n.c,'l',i+1));
+          demand(K(n,'l',i),bandH(w.length));
+        });
+        n.cod.forEach((w,i)=>{
+          union(K(n,'r',i),K(n.c,'r',i+1));
+          demand(K(n,'r',i),bandH(w.length));
+        });return;
+      case 'tseq':{
+        n.cs.forEach(walk);
+        const a=n.cs[0],z=n.cs[n.cs.length-1];
+        n.dom.forEach((_,j)=>union(K(n,'l',j),K(a,'l',j)));
+        n.cod.forEach((_,j)=>union(K(n,'r',j),K(z,'r',j)));
+        for(let i=0;i+1<n.cs.length;i++)
+          n.cs[i].cod.forEach((_,j)=>union(K(n.cs[i],'r',j),K(n.cs[i+1],'l',j)));
+        return;
+      }
+      case 'tsum':{
+        n.cs.forEach(walk);
+        let li=0,ri=0;
+        n.cs.forEach(c=>{
+          c.dom.forEach((_,j)=>union(K(n,'l',li+j),K(c,'l',j)));
+          c.cod.forEach((_,j)=>union(K(n,'r',ri+j),K(c,'r',j)));
+          li+=c.dom.length;ri+=c.cod.length;
+        });
+        return;
+      }
+    }
+  })(root);
+  const H=new Map();
+  dem.forEach(([k,h])=>{const r=find(k);H.set(r,Math.max(H.get(r)||0,h));});
+  (function apply(n){
+    const res=(s,i)=>H.get(find(K(n,s,i)))||bandH(1);
+    if(['tid','tcirc','tswap','tcopy','tcocopy','tdisc','tcodisc','ttr'].includes(n.k)){
+      n.lpH=n.dom.map((_,i)=>res('l',i));
+      n.rpH=n.cod.map((_,i)=>res('r',i));
+    }
+    if(n.k==='tcirc')return;
+    if(n.cs)n.cs.forEach(apply);
+    else if(n.c)apply(n.c);
+  })(root);
+}
+
+function tmeasure(node){
+  switch(node.k){
+    case 'tid0': node.natW=0.8;node.h=0.3;node.lp=[];node.rp=[];break;
+    case 'tid':{
+      const h1=node.lpH[0],h2=node.rpH[0];
+      node.natW=0.8;node.h=Math.max(h1,h2);
+      node.lp=[{off:0,h:h1,word:node.word}];node.rp=[{off:0,h:h2,word:node.word}];break;
+    }
+    case 'tcirc':{
+      // uniform rectangle at the RESOLVED class height (≥ what the circuit
+      // needs); re-squeeze boxes against the actual available room
+      const H=node.lpH[0];
+      CSQ=1;cmeasure(node.c);
+      if(node.c.h>H-0.16){
+        CSQ=Math.max(0.5,(H-0.16)/node.c.h);
+        cmeasure(node.c);CSQ=1;
+      }
+      node.hMid=H;
+      node.h=H;
+      node.natW=node.c.natW+0.7;
+      node.lp=[{off:0,h:H,word:node.c.dom}];node.rp=[{off:0,h:H,word:node.c.cod}];break;
+    }
+    case 'tswap':{
+      const hu=node.lpH[0],hv=node.lpH[1];
+      node.h=hu+hv+GAP;
+      node.natW=1.9+0.15*Math.max(0,node.u.length+node.v.length-2)+0.3*Math.max(0,node.h-2*bandH(1)-GAP);
+      node.lp=[{off:node.h/2-hu/2,h:hu,word:node.u},{off:-node.h/2+hv/2,h:hv,word:node.v}];
+      node.rp=[{off:node.h/2-hv/2,h:hv,word:node.v},{off:-node.h/2+hu/2,h:hu,word:node.u}];
+      break;
+    }
+    case 'tcopy':{
+      const hS=node.lpH[0],h1=node.rpH[0],h2=node.rpH[1];
+      const hTot=h1+GAP+h2;
+      node.h=Math.max(hTot,hS);
+      node.natW=1.6+0.12*Math.max(0,node.word.length-1)
+               +0.3*Math.max(0,hTot-2*bandH(node.word.length)-GAP);
+      node.lp=[{off:0,h:hS,word:node.word}];
+      node.rp=[{off:hTot/2-h1/2,h:h1,word:node.word},{off:-hTot/2+h2/2,h:h2,word:node.word}];
+      break;
+    }
+    case 'tcocopy':{
+      const hS=node.rpH[0],h1=node.lpH[0],h2=node.lpH[1];
+      const hTot=h1+GAP+h2;
+      node.h=Math.max(hTot,hS);
+      node.natW=1.6+0.12*Math.max(0,node.word.length-1)
+               +0.3*Math.max(0,hTot-2*bandH(node.word.length)-GAP);
+      node.lp=[{off:hTot/2-h1/2,h:h1,word:node.word},{off:-hTot/2+h2/2,h:h2,word:node.word}];
+      node.rp=[{off:0,h:hS,word:node.word}];
+      break;
+    }
+    case 'tdisc':{
+      const hu=node.lpH[0];
+      node.h=hu;node.natW=0.8;
+      node.lp=[{off:0,h:hu,word:node.word}];node.rp=[];break;
+    }
+    case 'tcodisc':{
+      const hu=node.rpH[0];
+      node.h=hu;node.natW=0.8;
+      node.lp=[];node.rp=[{off:0,h:hu,word:node.word}];break;
+    }
+    case 'ttr':{
+      tmeasure(node.c);
+      const hL=node.c.lp[0].h,hR=node.c.rp[0].h,Hm=Math.max(hL,hR);
+      node.clr=0.35;                  // clearance between body and loop band
+      node.h=node.c.h+node.clr+Hm;
+      // semicircular U-turns: horizontal extent = half the outer vertical span
+      const yLoopRel=node.c.h/2+node.clr+Hm/2;   // loop center above body center
+      node.eL=(yLoopRel-node.c.lp[0].off+hL)/2;
+      node.eR=(yLoopRel-node.c.rp[0].off+hR)/2;
+      node.natW=node.c.natW+2*(Math.max(node.eL,node.eR)+0.1);
+      const dy=-(node.clr+Hm)/2;      // body center relative to node center
+      node.dy=dy;
+      // external port heights come from the global resolution (the
+      // pass-through extensions ramp between them and the body's ports)
+      node.lp=node.c.lp.slice(1).map((p,i)=>({...p,off:p.off+dy,h:node.lpH[i]}));
+      node.rp=node.c.rp.slice(1).map((p,i)=>({...p,off:p.off+dy,h:node.rpH[i]}));
+      break;
+    }
+    case 'tseq':{
+      node.cs.forEach(tmeasure);
+      // align stages by port centroid, not bounding box: a stage whose bands
+      // sit off-centre (e.g. a trace with its loop on top) shifts so its
+      // ports face the neighbour's ports
+      const mean=ps=>ps.length?ps.reduce((a,p)=>a+p.off,0)/ps.length:0;
+      const dys=[0];
+      for(let i=0;i+1<node.cs.length;i++)
+        dys.push(dys[i]+mean(node.cs[i].rp)-mean(node.cs[i+1].lp));
+      const top=Math.max(...node.cs.map((c,i)=>dys[i]+c.h/2));
+      const bot=Math.min(...node.cs.map((c,i)=>dys[i]-c.h/2));
+      const mid=(top+bot)/2;
+      node.dys=dys.map(d=>d-mid);
+      node.h=top-bot;
+      node.gaps=[];let w=0;
+      node.cs.forEach((c,i)=>{
+        w+=c.natW;
+        if(i+1<node.cs.length){
+          const a=c.rp.map(p=>({...p,off:p.off+node.dys[i]}));
+          const b=node.cs[i+1].lp.map(p=>({...p,off:p.off+node.dys[i+1]}));
+          // a band-less junction (e.g. disc;codisc) still needs a gap, or the
+          // two cap tips coincide and the boundary walk sees a branch point
+          const gap=a.length===0?0.5:portsMatch(a,b)?0:Math.max(0.6,
+            0.55*Math.max(...a.map((p,j)=>Math.abs(p.off-b[j].off)),0));
+          node.gaps.push(gap);w+=gap;
+        }
+      });
+      node.natW=w;
+      node.lp=node.cs[0].lp.map(p=>({...p,off:p.off+node.dys[0]}));
+      node.rp=node.cs[node.cs.length-1].rp.map(p=>({...p,off:p.off+node.dys[node.cs.length-1]}));
+      break;
+    }
+    case 'tsum':{
+      node.cs.forEach(tmeasure);
+      node.natW=Math.max(...node.cs.map(c=>c.natW));
+      node.h=node.cs.reduce((a,c)=>a+c.h,0)+GAP*(node.cs.length-1);
+      node.bc=[];let cum=0;
+      node.lp=[];node.rp=[];
+      node.cs.forEach(c=>{
+        const bc=node.h/2-cum-c.h/2;node.bc.push(bc);cum+=c.h+GAP;
+        node.lp.push(...c.lp.map(p=>({...p,off:p.off+bc})));
+        node.rp.push(...c.rp.map(p=>({...p,off:p.off+bc})));
+      });
+      break;
+    }
+  }
+}
+
+/* fork geometry (tape diagonal ◁) in local coords: x∈[0,nw], input band at y=0.
+   Follows the paper's \Tcomonoid: outer edges leave horizontally and arrive at
+   an angle; the notch is rounded with vertical tangents at its left end.
+   huS = height of the single (merged) band; huB1/huB2 = heights of the two
+   branches — all may differ after global height resolution. */
+function forkGeom(nw,huS,huB1,huB2,y1,y2,k){
+  const B=[],P=[];
+  const lead=0.26*nw;              // straight lead-in on the single-band side
+  const xf=lead+0.28*(nw-lead),xc=lead+0.55*(nw-lead);
+  const tl1=S(0,huS/2,lead,huS/2),tl2=S(lead,huS/2,nw,y1+huB1/2,0,180,0.85);
+  const bl1=S(0,-huS/2,lead,-huS/2),bl2=S(lead,-huS/2,nw,y2-huB2/2,0,180,0.85);
+  const n1=S(nw,y1-huB1/2,xc,0,180,90),n2=S(xc,0,nw,y2+huB2/2,-90,180);
+  B.push(tl1,tl2,bl1,bl2,n1,n2);
+  const F=[{segs:[tl1,tl2,
+    S(nw,y1+huB1/2,nw,y1-huB1/2),n1,n2,S(nw,y2+huB2/2,nw,y2-huB2/2),
+    revSeg(bl2),revSeg(bl1),S(0,-huS/2,0,huS/2)]}];
+  wireOffs(k).forEach(o=>{
+    P.push({t:'wire',x1:0,y1:o,x2:xf,y2:o});
+    P.push({t:'wire',x1:xf,y1:o,x2:nw,y2:y1+o,out:80,in:180});
+    P.push({t:'wire',x1:xf,y1:o,x2:nw,y2:y2+o,out:-80,in:180});
+  });
+  return {B,P,F};
+}
+/* x-coordinate of the rounded cap boundary at wire height o, so cap wires
+   run all the way to the tape border. Cap: bezier from (xe,±h/2) to the tip
+   (xt,0), horizontal at xe, vertical at the tip. */
+function capWireX(xe,xt,h,o){
+  const ao=Math.abs(o);
+  const sgn=Math.sign(xt-xe)||1;
+  const d=Math.hypot(xt-xe,h/2),r=0.3993*d;
+  const P=[[xe,h/2],[xe+sgn*r,h/2],[xt,r],[xt,0]];
+  let prev=P[0];
+  for(let i=1;i<=32;i++){
+    const t=i/32,u=1-t;
+    const x=u*u*u*P[0][0]+3*u*u*t*P[1][0]+3*u*t*t*P[2][0]+t*t*t*P[3][0];
+    const y=u*u*u*P[0][1]+3*u*u*t*P[1][1]+3*u*t*t*P[2][1]+t*t*t*P[3][1];
+    if(y<=ao){
+      const f=(prev[1]-ao)/((prev[1]-y)||1e-9);
+      return prev[0]+f*(x-prev[0]);
+    }
+    prev=[x,y];
+  }
+  return xt;
+}
+const normA=a=>{a%=360;if(a>180)a-=360;if(a<=-180)a+=360;return a;};
+function mirrorGeom(g,W){
+  const m=s=>({...s,x1:W-s.x1,x2:W-s.x2,
+    ...(s.out!==undefined?{out:normA(180-s.out),in:normA(180-s.in)}:{})});
+  return {B:g.B.map(m),P:g.P.map(m),F:g.F.map(f=>({segs:f.segs.map(m)}))};
+}
+function emitGeom(ctx,g,dx,dy){
+  const t=s=>({...s,x1:s.x1+dx,y1:s.y1+dy,x2:s.x2+dx,y2:s.y2+dy});
+  g.B.forEach(s=>ctx.B.push(t(s)));
+  g.P.forEach(s=>ctx.P.push(t(s)));
+  g.F.forEach(f=>ctx.F.push({segs:f.segs.map(t)}));
+}
+
+/* place a fixed-size piece centered in width w, padding with band extensions */
+function padded(node,x,cy,w,ctx,f){
+  const pad=(w-node.natW)/2;
+  if(pad>1e-9){
+    node.lp.forEach(p=>bandExt(ctx,x,x+pad,cy+p.off,p.word,p.h));
+    node.rp.forEach(p=>bandExt(ctx,x+w-pad,x+w,cy+p.off,p.word,p.h));
+  }
+  f(x+Math.max(pad,0),node.natW);
+}
+
+function tplace(node,x,cy,w,ctx){
+  const wire=(x1,y1,x2,y2,opt)=>ctx.P.push({t:'wire',x1,y1,x2,y2,...(opt||{})});
+  switch(node.k){
+    case 'tid0': break;
+    case 'tid':{
+      const h1=node.lp[0].h,h2=node.rp[0].h;
+      if(Math.abs(h1-h2)<1e-9)bandExt(ctx,x,x+w,cy,node.word,h1);
+      else bandConn(ctx,x,x+w,cy,h1,cy,h2,node.word);   // smooth ramp
+      break;
+    }
+    case 'tcirc': padded(node,x,cy,w,ctx,(x0,nw)=>{
+      // a uniform rectangle band (negotiation keeps both ports equal)
+      const hi=node.lp[0].h,ho=node.rp[0].h;
+      const top=Math.abs(hi-ho)<1e-9
+        ?S(x0,cy+hi/2,x0+nw,cy+ho/2)
+        :S(x0,cy+hi/2,x0+nw,cy+ho/2,0,180,0.9);
+      const bot=Math.abs(hi-ho)<1e-9
+        ?S(x0,cy-hi/2,x0+nw,cy-ho/2)
+        :S(x0,cy-hi/2,x0+nw,cy-ho/2,0,180,0.9);
+      ctx.B.push(top,bot);
+      addFill(ctx,[top,S(x0+nw,cy+ho/2,x0+nw,cy-ho/2),
+        revSeg(bot),S(x0,cy-hi/2,x0,cy+hi/2)]);
+      const cw=node.c.natW,cx0=x0+(nw-cw)/2;
+      // funnels: band wires sit at wireOffs(k); the circuit's ports may not
+      // (stacked boxes) — reconnect with S-curves
+      const funnel=(fromOffs,toOffs,xa,xb)=>fromOffs.forEach((oa,i)=>{
+        const ob=toOffs[i];
+        if(Math.abs(oa-ob)<1e-6)wire(xa,cy+oa,xb,cy+ob);
+        else wire(xa,cy+oa,xb,cy+ob,{out:0,in:180,loose:0.8});
+      });
+      funnel(wireOffs(node.c.dom.length),node.c.lo,x0,cx0);
+      funnel(node.c.ro,wireOffs(node.c.cod.length),cx0+cw,x0+nw);
+      cplace(node.c,cx0,cy,cw,ctx);
+    });break;
+    case 'tswap': padded(node,x,cy,w,ctx,(x0,nw)=>{
+      const [U,V]=[node.lp[0],node.lp[1]],[Vr,Ur]=[node.rp[0],node.rp[1]];
+      const L=0.75;
+      const band=(pa,pb)=>{
+        const top=S(x0,cy+pa.off+pa.h/2,x0+nw,cy+pb.off+pa.h/2,0,180,L);
+        const bot=S(x0,cy+pa.off-pa.h/2,x0+nw,cy+pb.off-pa.h/2,0,180,L);
+        ctx.B.push(top,bot);
+        addFill(ctx,[top,S(x0+nw,cy+pb.off+pa.h/2,x0+nw,cy+pb.off-pa.h/2),
+          revSeg(bot),S(x0,cy+pa.off-pa.h/2,x0,cy+pa.off+pa.h/2)]);
+      };
+      band(U,Ur);band(V,Vr);
+      wireOffs(node.u.length).forEach(o=>
+        wire(x0,cy+U.off+o,x0+nw,cy+Ur.off+o,{out:0,in:180,loose:L}));
+      wireOffs(node.v.length).forEach(o=>
+        wire(x0,cy+V.off+o,x0+nw,cy+Vr.off+o,{out:0,in:180,loose:L}));
+    });break;
+    case 'tcopy': padded(node,x,cy,w,ctx,(x0,nw)=>{
+      const g=forkGeom(nw,node.lp[0].h,node.rp[0].h,node.rp[1].h,
+                       node.rp[0].off,node.rp[1].off,node.word.length);
+      emitGeom(ctx,g,x0,cy);
+    });break;
+    case 'tcocopy': padded(node,x,cy,w,ctx,(x0,nw)=>{
+      const g=mirrorGeom(forkGeom(nw,node.rp[0].h,node.lp[0].h,node.lp[1].h,
+                       node.lp[0].off,node.lp[1].off,node.word.length),nw);
+      emitGeom(ctx,g,x0,cy);
+    });break;
+    case 'tdisc': padded(node,x,cy,w,ctx,(x0,nw)=>{
+      const h=node.lp[0].h,xe=x0+nw-0.5,xt=x0+nw,k=node.word.length;
+      const top=S(x0,cy+h/2,xe,cy+h/2),c1=S(xe,cy+h/2,xt,cy,0,90),
+            c2=S(xt,cy,xe,cy-h/2,-90,0),bot=S(x0,cy-h/2,xe,cy-h/2);
+      ctx.B.push(top,c1,c2,bot);
+      addFill(ctx,[top,c1,c2,revSeg(bot),S(x0,cy-h/2,x0,cy+h/2)]);
+      wireOffs(k).forEach(o=>wire(x0,cy+o,capWireX(xe,xt,h,o),cy+o));
+    });break;
+    case 'tcodisc': padded(node,x,cy,w,ctx,(x0,nw)=>{
+      const h=node.rp[0].h,xe=x0+0.5,xt=x0,k=node.word.length;
+      const top=S(xe,cy+h/2,x0+nw,cy+h/2),c1=S(xt,cy,xe,cy+h/2,90,180),
+            c2=S(xe,cy-h/2,xt,cy,180,-90),bot=S(xe,cy-h/2,x0+nw,cy-h/2);
+      ctx.B.push(top,c1,c2,bot);
+      addFill(ctx,[c1,top,S(x0+nw,cy+h/2,x0+nw,cy-h/2),revSeg(bot),c2]);
+      wireOffs(k).forEach(o=>wire(capWireX(xe,xt,h,o),cy+o,x0+nw,cy+o));
+    });break;
+    case 'ttr': padded(node,x,cy,w,ctx,(x0,nw)=>{
+      const c=node.c,cyc=cy+node.dy,E=(nw-c.natW)/2;
+      const bx0=x0+E,bx1=x0+nw-E;      // body extent
+      tplace(c,bx0,cyc,c.natW,ctx);
+      // pass-through bands (all but the first summand); the external end may
+      // carry a negotiated height — ramp to the body's own port height
+      c.lp.slice(1).forEach((p,i)=>
+        bandConn(ctx,x0,bx0,cyc+p.off,node.lp[i].h,cyc+p.off,p.h,p.word));
+      c.rp.slice(1).forEach((p,i)=>
+        bandConn(ctx,bx1,x0+nw,cyc+p.off,p.h,cyc+p.off,node.rp[i].h,p.word));
+      // the traced band
+      const pL=c.lp[0],pR=c.rp[0],hL=pL.h,hR=pR.h;
+      const yL=cyc+pL.off,yR=cyc+pR.off;
+      const yLoop=cyc+c.h/2+node.clr+Math.max(hL,hR)/2;
+      const k=node.u.length;
+      const SEMI=(4/3)/(2*0.3993);     // looseness of a semicircular `to` curve
+      const arc=(X,ya,yb,dir)=>{       // semicircular U-turn at x=X, bulging dir=±1
+        const s=S(X,ya,X,yb,dir>0?0:180,dir>0?0:180,SEMI);
+        ctx.B.push(s);return s;
+      };
+      const turn=(X,yPort,h,dir)=>{
+        const outer=arc(X,yPort-h/2,yLoop+h/2,dir);
+        const inner=arc(X,yPort+h/2,yLoop-h/2,dir);
+        addFill(ctx,[outer,S(X,yLoop+h/2,X,yLoop-h/2),revSeg(inner),
+                     S(X,yPort+h/2,X,yPort-h/2)]);
+      };
+      turn(bx1,yR,hR,+1);
+      wireOffs(k).forEach(o=>
+        wire(bx1,yR+o,bx1,yLoop-o,{out:0,in:0,loose:SEMI}));
+      turn(bx0,yL,hL,-1);
+      wireOffs(k).forEach(o=>
+        wire(bx0,yL+o,bx0,yLoop-o,{out:180,in:180,loose:SEMI}));
+      // loop band (right → left), with height transition if hL≠hR
+      if(Math.abs(hL-hR)<1e-9)
+        bandExt(ctx,bx0,bx1,yLoop,[],hR);
+      else
+        bandConn(ctx,bx0,bx1,yLoop,hL,yLoop,hR,[]);
+      wireOffs(k).forEach(o=>wire(bx0,yLoop-o,bx1,yLoop-o,
+        Math.abs(hL-hR)<1e-9?undefined:{out:0,in:180,loose:0.75}));
+    });break;
+    case 'tseq':{
+      const stretchable=node.cs.map(c=>c.k==='tid'||c.k==='tseq'||c.k==='tsum');
+      const nStretch=stretchable.filter(Boolean).length;
+      const extra=(w-node.natW)/(nStretch||node.cs.length);
+      let xx=x;
+      node.cs.forEach((c,i)=>{
+        const give=nStretch?(stretchable[i]?extra:0):extra;
+        const cw=c.natW+give;
+        tplace(c,xx,cy+node.dys[i],cw,ctx);
+        xx+=cw;
+        if(i+1<node.cs.length){
+          const gap=node.gaps[i];
+          if(gap>0){
+            const a=c.rp,b=node.cs[i+1].lp;
+            a.forEach((p,j)=>bandConn(ctx,xx,xx+gap,
+              cy+node.dys[i]+p.off,p.h,
+              cy+node.dys[i+1]+b[j].off,b[j].h,p.word));
+            xx+=gap;
+          }
+        }
+      });
+      break;
+    }
+    case 'tsum':
+      node.cs.forEach((c,i)=>tplace(c,x,cy+node.bc[i],w,ctx));
+      break;
+  }
+}
+
+/* ---------------- wire fusion (cosmetic) ---------------- */
+function mergeWires(P){
+  const key=(x,y)=>Math.round(x*1e4)+'|'+Math.round(y*1e4);
+  const stop=new Set();
+  for(const p of P){
+    if(p.t==='dot')stop.add(key(p.x,p.y));
+    if(p.t==='box'){stop.add(key(p.cx-p.bw/2,p.cy));stop.add(key(p.cx+p.bw/2,p.cy));}
+  }
+  const rest=P.filter(p=>p.t!=='wire');
+  let wires=P.filter(p=>p.t==='wire');
+  // fuse only collinear horizontal straights — an S-curve absorbed into a longer
+  // span would take a lazy diagonal and leave its tape
+  const isH=w=>w.out===undefined&&Math.abs(w.y1-w.y2)<1e-6;
+  let changed=true;
+  while(changed){
+    changed=false;
+    const ins=new Map(),outs=new Map();
+    const add=(m,k,w)=>{const a=m.get(k);a?a.push(w):m.set(k,[w]);};
+    for(const w of wires){add(outs,key(w.x1,w.y1),w);add(ins,key(w.x2,w.y2),w);}
+    for(const a of wires){
+      const J=key(a.x2,a.y2);
+      const i=ins.get(J),o=outs.get(J)||[];
+      if(!i||i.length!==1||o.length!==1)continue;
+      const b=o[0];
+      if(a===b)continue;
+      if(a.toDot||b.fromDot||a.toBox||b.fromBox)continue;
+      if(!isH(a)||!isH(b)||Math.abs(a.y1-b.y2)>1e-6)continue;
+      const m={t:'wire',x1:a.x1,y1:a.y1,x2:b.x2,y2:b.y2,
+               fromDot:a.fromDot,fromBox:a.fromBox,toDot:b.toDot,toBox:b.toBox};
+      wires=wires.filter(u=>u!==a&&u!==b);
+      wires.push(m);
+      changed=true;break;
+    }
+  }
+  return rest.concat(wires);
+}
+/* merge collinear boundary line segments sharing an endpoint */
+function mergeBounds(B){
+  const key=(x,y)=>Math.round(x*1e4)+'|'+Math.round(y*1e4);
+  let segs=B.slice(),changed=true;
+  const isL=s=>s.out===undefined;
+  while(changed){
+    changed=false;
+    outer:
+    for(const a of segs){
+      if(!isL(a))continue;
+      for(const b of segs){
+        if(a===b||!isL(b))continue;
+        // a end joins b start, collinear
+        if(key(a.x2,a.y2)===key(b.x1,b.y1)){
+          const colH=Math.abs(a.y1-a.y2)<1e-6&&Math.abs(b.y1-b.y2)<1e-6&&Math.abs(a.y1-b.y1)<1e-6;
+          const colV=Math.abs(a.x1-a.x2)<1e-6&&Math.abs(b.x1-b.x2)<1e-6&&Math.abs(a.x1-b.x1)<1e-6;
+          if(colH||colV){
+            // ensure no third segment meets at the junction
+            const J=key(a.x2,a.y2);
+            const deg=segs.filter(s=>key(s.x1,s.y1)===J||key(s.x2,s.y2)===J).length;
+            if(deg===2){
+              segs=segs.filter(s=>s!==a&&s!==b);
+              segs.push({x1:a.x1,y1:a.y1,x2:b.x2,y2:b.y2});
+              changed=true;break outer;
+            }
+          }
+        }
+      }
+    }
+  }
+  return segs;
+}
+
+/* ---------------- loop assembly ---------------- */
+function assembleLoops(B){
+  const key=(x,y)=>Math.round(x*1e4)+'|'+Math.round(y*1e4);
+  const rev=s=>({x1:s.x2,y1:s.y2,x2:s.x1,y2:s.y1,
+                 ...(s.out!==undefined?{out:s.in,in:s.out}:{}),
+                 ...(s.loose?{loose:s.loose}:{})});
+  const unused=new Set(B.map((_,i)=>i));
+  const endpoints=new Map();
+  const add=(k,i,end)=>{const a=endpoints.get(k);const e={i,end};a?a.push(e):endpoints.set(k,[e]);};
+  B.forEach((s,i)=>{add(key(s.x1,s.y1),i,0);add(key(s.x2,s.y2),i,1);});
+  const loops=[];
+  while(unused.size){
+    const start=unused.values().next().value;
+    unused.delete(start);
+    let cur=B[start];
+    const loop=[cur];
+    const startKey=key(cur.x1,cur.y1);
+    let guard=0;
+    while(key(cur.x2,cur.y2)!==startKey){
+      if(++guard>B.length+2)throw {msg:'internal layout error: tape boundary does not close'};
+      const J=key(cur.x2,cur.y2);
+      const cands=(endpoints.get(J)||[]).filter(e=>unused.has(e.i));
+      if(cands.length!==1)throw {msg:'internal layout error: tape boundary branches'};
+      const nxt=cands[0];
+      unused.delete(nxt.i);
+      cur=nxt.end===0?B[nxt.i]:rev(B[nxt.i]);
+      loop.push(cur);
+    }
+    loops.push(loop);
+  }
+  return loops;
+}
+/* flatten a segment for containment tests */
+function bezPts(x1,y1,x2,y2,out_,in_,loose){
+  const d=Math.hypot(x2-x1,y2-y1),r=0.3993*d*(loose||1);
+  const rad=a=>a*Math.PI/180;
+  const c1x=x1+r*Math.cos(rad(out_)),c1y=y1+r*Math.sin(rad(out_));
+  const c2x=x2+r*Math.cos(rad(in_)),c2y=y2+r*Math.sin(rad(in_));
+  const pts=[];
+  for(let i=1;i<=8;i++){
+    const t=i/8,u=1-t;
+    pts.push([u*u*u*x1+3*u*u*t*c1x+3*u*t*t*c2x+t*t*t*x2,
+              u*u*u*y1+3*u*u*t*c1y+3*u*t*t*c2y+t*t*t*y2]);
+  }
+  return pts;
+}
+function flattenLoop(loop){
+  const pts=[[loop[0].x1,loop[0].y1]];
+  for(const s of loop){
+    if(s.out===undefined)pts.push([s.x2,s.y2]);
+    else pts.push(...bezPts(s.x1,s.y1,s.x2,s.y2,s.out,s.in,s.loose));
+  }
+  return pts;
+}
+/* ---------------- top-level layout ---------------- */
+function layout(root){
+  resolveHeights(root);
+  tmeasure(root);
+  const ctx={P:[],B:[],F:[]};
+  tplace(root,0,0,root.natW,ctx);
+  // close external ports and add labels
+  const labels=[];
+  const closePorts=(ports,X,side)=>{
+    ports.forEach(p=>{
+      seg(ctx.B,X,p.off-p.h/2,X,p.off+p.h/2);
+      if(p.word.length===0){
+        labels.push({t:'label',x:X+(side<0?-0.45:0.45),y:p.off,text:'1'});
+      }else{
+        const small=p.word.length>1;   // tighter pitch: shrink to avoid collisions
+        wireOffs(p.word.length).forEach((o,i)=>{
+          const txt=p.word[i];
+          labels.push({t:'label',x:X+(side<0?-1:1)*(0.28+0.17*txt.length),
+                       y:p.off+o,text:txt,small});
+        });
+      }
+    });
+  };
+  closePorts(root.lp,0,-1);
+  closePorts(root.rp,root.natW,+1);
+  ctx.P=mergeWires(ctx.P);
+  // loops are used for BORDERS only; the tape area is painted per-piece (ctx.F)
+  const loops=assembleLoops(mergeBounds(ctx.B)).map(segs=>({segs}));
+  // bbox
+  let x1=1e9,y1=1e9,x2=-1e9,y2=-1e9;
+  const see=(x,y)=>{x1=Math.min(x1,x);y1=Math.min(y1,y);x2=Math.max(x2,x);y2=Math.max(y2,y);};
+  loops.forEach(l=>flattenLoop(l.segs).forEach(p=>see(p[0],p[1])));
+  labels.forEach(l=>{see(l.x-0.3,l.y-0.25);see(l.x+0.3,l.y+0.25);});
+  for(const p of ctx.P){
+    if(p.t==='wire'){see(p.x1,p.y1);see(p.x2,p.y2);}
+    else if(p.t==='box'){see(p.cx-p.bw/2,p.cy-p.bh/2);see(p.cx+p.bw/2,p.cy+p.bh/2);}
+    else if(p.t==='dot')see(p.x,p.y);
+  }
+  if(x1>x2){x1=0;y1=0;x2=1;y2=0.5;}
+  return {prims:ctx.P,loops,fills:ctx.F,labels,bbox:{x1,y1,x2,y2}};
+}
+
+/* ---------------- SVG renderer ---------------- */
+const TAPE_BG='rgb(255,179,179)',TAPE_BORDER='rgb(255,102,102)';
+function segPath(s,X,Y){
+  if(s.out===undefined)return `L ${X(s.x2)} ${Y(s.y2)}`;
+  const d=Math.hypot(s.x2-s.x1,s.y2-s.y1),r=0.3993*d*(s.loose||1);
+  const rad=a=>a*Math.PI/180;
+  const c1x=s.x1+r*Math.cos(rad(s.out)),c1y=s.y1+r*Math.sin(rad(s.out));
+  const c2x=s.x2+r*Math.cos(rad(s.in)),c2y=s.y2+r*Math.sin(rad(s.in));
+  return `C ${X(c1x)} ${Y(c1y)}, ${X(c2x)} ${Y(c2y)}, ${X(s.x2)} ${Y(s.y2)}`;
+}
+function renderSVG(L,scalePx,showLabels){
+  const S=scalePx,pad=26;
+  const {x1,y1,x2,y2}=L.bbox;
+  const W=(x2-x1)*S+2*pad,H=(y2-y1)*S+2*pad;
+  const X=x=>(x-x1)*S+pad,Y=y=>(y2-y)*S+pad;
+  let out=`<svg xmlns="http://www.w3.org/2000/svg" width="${W.toFixed(1)}" height="${H.toFixed(1)}" viewBox="0 0 ${W.toFixed(1)} ${H.toFixed(1)}">`;
+  const loopD=l=>{
+    let d=`M ${X(l.segs[0].x1)} ${Y(l.segs[0].y1)} `;
+    for(const s of l.segs)d+=segPath(s,X,Y)+' ';
+    return d+'Z';
+  };
+  // fills: union of per-piece outlines — self-crossings and bands through
+  // trace holes both render correctly this way
+  for(const f of L.fills)
+    out+=`<path d="${loopD(f)}" fill="${TAPE_BG}" stroke="${TAPE_BG}" stroke-width="${(S*0.02).toFixed(2)}"/>`;
+  // borders (paper: 0.5pt at scale 0.25 ≈ 0.07 units)
+  const blw=Math.max(1.2,S*0.06);
+  for(const l of L.loops)
+    out+=`<path d="${loopD(l)}" fill="none" stroke="${TAPE_BORDER}" stroke-width="${blw}" stroke-linejoin="round"/>`;
+  // wires (paper: 0.4pt ≈ 0.056 units)
+  const lw=Math.max(1.1,S*0.05);
+  for(const p of L.prims){
+    if(p.t!=='wire')continue;
+    let d=`M ${X(p.x1)} ${Y(p.y1)} `+segPath(p,X,Y);
+    out+=`<path d="${d}" fill="none" stroke="#000" stroke-width="${lw}" stroke-linecap="round"/>`;
+  }
+  // dots & boxes
+  for(const p of L.prims){
+    if(p.t==='dot')
+      out+=`<circle cx="${X(p.x)}" cy="${Y(p.y)}" r="${Math.max(2.4,S*0.13)}" fill="#000"/>`;
+    else if(p.t==='box'){
+      const ch=0.14*S;
+      const bx=X(p.cx-p.bw/2),by=Y(p.cy+p.bh/2),bw=p.bw*S,bh=p.bh*S;
+      const pts=p.op
+        ?[[bx+ch,by],[bx+bw,by],[bx+bw,by+bh],[bx,by+bh],[bx,by+ch]]
+        :[[bx,by],[bx+bw-ch,by],[bx+bw,by+ch],[bx+bw,by+bh],[bx,by+bh]];
+      const occ=escXml(p.occ||p.label);
+      out+=`<polygon points="${pts.map(q=>q.map(v=>v.toFixed(2)).join(',')).join(' ')}" fill="#fff" stroke="#000" stroke-width="${lw}" data-occ="${occ}" data-name="${escXml(p.label)}" style="cursor:pointer"/>`;
+      out+=`<text x="${X(p.cx)}" y="${Y(p.cy)}" text-anchor="middle" dominant-baseline="central" font-family="STIX Two Math, Georgia, serif" font-style="italic" font-size="${Math.min(S*0.38,p.bh*S*0.62).toFixed(1)}" fill="#000" data-occ="${occ}" data-name="${escXml(p.label)}" style="cursor:pointer">${escXml(p.label)}${p.op?'†':''}</text>`;
+    }
+  }
+  if(showLabels)for(const l of L.labels)
+    out+=`<text x="${X(l.x)}" y="${Y(l.y)}" text-anchor="middle" dominant-baseline="central" font-family="STIX Two Math, Georgia, serif" font-style="italic" font-size="${(S*(l.small?0.33:0.40)).toFixed(1)}" fill="#333">${escXml(l.text)}</text>`;
+  return out+'</svg>';
+}
+const escXml=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+/* ---------------- TikZ exporter ---------------- */
+function fmtN(v){let s=(Math.round(v*1000)/1000).toString();return s==='-0'?'0':s;}
+function renderTikZ(L,showLabels){
+  const nodes=[],edges=[];
+  let nid=0;
+  const coordMap=new Map();
+  const key=(x,y)=>fmtN(x)+','+fmtN(y);
+  const pt=(x,y)=>{
+    const k=key(x,y);
+    if(coordMap.has(k))return coordMap.get(k);
+    const id=nid++;
+    nodes.push(`\t\t\\node [style=none] (${id}) at (${fmtN(x)}, ${fmtN(y)}) {};`);
+    const ref=`(${id}.center)`;
+    coordMap.set(k,ref);return ref;
+  };
+  const opts=s=>s.out===undefined?'':
+    `[out=${fmtN(s.out)}, in=${fmtN(s.in)}${s.loose&&Math.abs(s.loose-1)>1e-3?`, looseness=${fmtN(Math.min(s.loose,4))}`:''}] `;
+  const loopPath=l=>{
+    let out=pt(l.segs[0].x1,l.segs[0].y1);
+    for(let i=0;i<l.segs.length;i++){
+      const s=l.segs[i],last=i===l.segs.length-1;
+      out+=`\n\t\t\t to ${opts(s)}${last?'cycle':pt(s.x2,s.y2)}`;
+    }
+    return out;
+  };
+  // boxes & dots first (nodelayer)
+  for(const p of L.prims){
+    if(p.t==='dot'){
+      nodes.push(`\t\t\\node [style=black] (${nid++}) at (${fmtN(p.x)}, ${fmtN(p.y)}) {};`);
+    }else if(p.t==='box'){
+      const style=p.op?'bboxOp':'bbox';
+      // node sizes ignore the picture's scale=0.25, and the em-minimum can't
+      // shrink below its text — scale the whole node (text included) so the
+      // rendered box matches the layout size. Style renders 1.4em·0.6 ≈ 0.295cm.
+      const s=p.bh*0.25/0.295;
+      const mw=fmtN(p.bw*0.25/(0.6*s));
+      nodes.push(`\t\t\\node [style=${style}, scale=${fmtN(s)}, minimum width=${mw}cm] (${nid++}) at (${fmtN(p.cx)}, ${fmtN(p.cy)}) {$${p.label}${p.op?"^\\dagger":''}$};`);
+    }
+  }
+  if(showLabels)for(const l of L.labels)
+    nodes.push(`\t\t\\node [style=label${l.small?', scale=0.75':''}] (${nid++}) at (${fmtN(l.x)}, ${fmtN(l.y)}) {$${l.text.replace(/⊗/g,'{\\otimes}')}$};`);
+  // tape fills as the union of per-piece outlines (renders self-crossings and
+  // bands through trace holes correctly), then borders, then wires
+  for(const f of L.fills)
+    edges.push(`\t\t\\draw [style=tapeFill, draw=tapeBg, line width=0.1pt] ${loopPath(f)};`);
+  for(const l of L.loops)
+    edges.push(`\t\t\\draw [style=tapeNoFill] ${loopPath(l)};`);
+  for(const p of L.prims){
+    if(p.t!=='wire')continue;
+    if(Math.abs(p.x1-p.x2)<1e-9&&Math.abs(p.y1-p.y2)<1e-9)continue;
+    const a=pt(p.x1,p.y1),b=pt(p.x2,p.y2);
+    let o='';
+    if(p.out!==undefined){
+      o=`, out=${fmtN(p.out)}, in=${fmtN(p.in)}`;
+      if(p.loose&&Math.abs(p.loose-1)>1e-3)o+=`, looseness=${fmtN(Math.min(p.loose,4))}`;
+    }
+    edges.push(`\t\t\\draw [wire${o}] ${a} to ${b};`);
+  }
+  return `\\begin{tikzpicture}\n\t\\begin{pgfonlayer}{nodelayer}\n${nodes.join('\n')}\n\t\\end{pgfonlayer}\n\t\\begin{pgfonlayer}{edgelayer}\n${edges.join('\n')}\n\t\\end{pgfonlayer}\n\\end{tikzpicture}`;
+}
+
+const STANDALONE_PRE=String.raw`\documentclass[margin=2mm]{standalone}
+\usepackage{tikz}
+\usetikzlibrary{arrows,backgrounds,shapes.geometric,shapes.misc,arrows.meta}
+\pgfdeclarelayer{background}
+\pgfdeclarelayer{edgelayer}
+\pgfdeclarelayer{nodelayer}
+\pgfsetlayers{background,edgelayer,nodelayer,main}
+% ---- styles from the paper (Bonchi, Di Giorgio, Di Lavore, arXiv:2512.07240) ----
+\colorlet{tapeBg}{red!30}
+\colorlet{tapeBorder}{red!60}
+\tikzset{every picture/.append style={scale=0.25}}
+\tikzstyle{none}=[inner sep=0pt]
+\tikzstyle{label}=[fill=none, draw=none, shape=circle, scale=0.6]
+\tikzstyle{black}=[circle, draw=black, fill=black, inner sep=0pt, minimum size=2.5pt]
+\tikzstyle{bbox}=[fill=white, draw=black, chamfered rectangle, chamfered rectangle corners={north east}, chamfered rectangle sep=2pt, inner sep=1pt, minimum height=1.4em, minimum width=1.4em, scale=0.6]
+\tikzstyle{bboxOp}=[fill=white, draw=black, chamfered rectangle, chamfered rectangle corners={north west}, chamfered rectangle sep=2pt, inner sep=1pt, minimum height=1.4em, minimum width=1.4em, scale=0.6]
+\tikzstyle{tape}=[fill=tapeBg, draw=tapeBorder, line width=0.5pt]
+\tikzstyle{tapeFill}=[fill=tapeBg]
+\tikzstyle{tapeNoFill}=[draw=tapeBorder, line width=0.5pt]
+\tikzstyle{wire}=[-]
+\begin{document}
+`;
+
+/* ================= UI ================= */
+const $=id=>document.getElementById(id);
+const state=loadState();
+
+function loadState(){
+  try{
+    const s=JSON.parse(localStorage.getItem('tape-tool')||'{}');
+    return {
+      term: s.term ?? 'copy(A) ; ([f] + star([g])) ; cocopy(A)',
+      sig: s.sig ?? [{name:'f',dom:'A',cod:'A'},{name:'g',dom:'A',cod:'A'},{name:'R',dom:'A A',cod:'A'},{name:'c',dom:'',cod:'A'}],
+      zoom: s.zoom ?? 46,
+      fmt: s.fmt ?? 'tikzit',
+      labels: s.labels ?? true,
+      boxSc: s.boxSc ?? {}
+    };
+  }catch(e){
+    return {term:'copy(A) ; ([f] + star([g])) ; cocopy(A)',
+            sig:[{name:'f',dom:'A',cod:'A'},{name:'g',dom:'A',cod:'A'}],zoom:46,fmt:'tikzit',labels:true};
+  }
+}
+function saveState(){
+  localStorage.setItem('tape-tool',JSON.stringify({
+    term:$('termIn').value,sig:state.sig,boxSc:state.boxSc||{},
+    zoom:+$('zoom').value,fmt:document.querySelector('input[name=fmt]:checked').value,
+    labels:$('labelsChk').checked
+  }));
+}
+const parseSigWord=s=>{
+  s=(s||'').trim();
+  if(s===''||s==='1')return [];
+  return s.split(/[\s*⊗]+/).filter(Boolean);
+};
+
+function renderSig(flash){
+  const tb=$('sigBody');tb.innerHTML='';
+  state.sig.forEach((s,i)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td><input value="${s.name}" data-i="${i}" data-f="name"></td>
+      <td><input class="word" value="${s.dom}" data-i="${i}" data-f="dom" placeholder="1"></td>
+      <td style="color:var(--muted)">→</td>
+      <td><input class="word" value="${s.cod}" data-i="${i}" data-f="cod" placeholder="1"></td>
+      <td><button class="del" data-i="${i}" title="remove">✕</button></td>`;
+    if(flash&&flash.includes(s.name))tr.style.background='rgba(245,158,11,.18)';
+    if(s.auto){tr.style.opacity=.55;tr.title='inferred from the term — edit to keep';}
+    tb.appendChild(tr);
+  });
+}
+$('sigBody').addEventListener('input',ev=>{
+  const i=+ev.target.dataset.i,f=ev.target.dataset.f;
+  delete state.sig[i].auto;
+  state.sig[i][f]=ev.target.value.trim();
+  update();saveState();
+});
+$('sigBody').addEventListener('click',ev=>{
+  if(ev.target.classList.contains('del')){
+    state.sig.splice(+ev.target.dataset.i,1);
+    renderSig();update();saveState();
+  }
+});
+$('addSym').onclick=()=>{
+  let base='S',i=1,nm=base;
+  while(state.sig.some(s=>s.name===nm))nm=base+(i++);
+  state.sig.push({name:nm,dom:'A',cod:'A'});renderSig();update();saveState();
+};
+document.querySelectorAll('.help code').forEach(el=>{
+  el.addEventListener('click',()=>{
+    if(el.textContent.includes(';')||el.textContent.includes('(')){
+      $('termIn').value=el.textContent;update();saveState();
+    }
+  });
+});
+
+let lastTikz='',lastSvg='';
+function update(){
+  const src=$('termIn').value;
+  const err=$('errBar');
+  if(!src.trim()){
+    $('canvas').innerHTML='<div style="color:#777;font-size:13px">empty term — write something</div>';
+    err.className='';err.style.display='none';
+    $('tikzOut').value='';
+    return;
+  }
+  try{
+    const ast=parse(src);
+    const used=collectNames(ast);
+    const before=state.sig.length;
+    state.sig=state.sig.filter(s=>!s.auto||used.has(s.name));
+    const added=[];
+    const sigT=state.sig.map(s=>({name:s.name,dom:parseSigWord(s.dom),cod:parseSigWord(s.cod)}));
+    // typecheck against parsed signature; auto-added entries mirrored back
+    ttypecheck(ast,sigT,added);
+    added.forEach(nm=>{
+      const s=sigT.find(e=>e.name===nm);
+      state.sig.push({name:nm,dom:s.dom.join(' '),cod:s.cod.join(' '),auto:true});
+    });
+    if(added.length||state.sig.length!==before){renderSig(added);saveState();}
+    // stable per-occurrence ids: n-th box with a given name, in term order
+    const counts={};
+    (function assignOccs(n){
+      if(n.k==='box'){const i=counts[n.name]=(counts[n.name]??-1)+1;n.occ=n.name+'#'+i;return;}
+      if(n.k==='tcirc'){assignOccs(n.c);return;}
+      if(n.cs)n.cs.forEach(assignOccs);
+      else if(n.c)assignOccs(n.c);
+    })(ast);
+    BOXSC={};
+    for(const k in (state.boxSc||{}))if(Math.abs(state.boxSc[k]-1)>1e-3)BOXSC[k]=state.boxSc[k];
+    const L=layout(ast);
+    const showLabels=$('labelsChk').checked;
+    lastSvg=renderSVG(L,+$('zoom').value,showLabels);
+    $('canvas').innerHTML=lastSvg;
+    const frag=renderTikZ(L,showLabels);
+    const fmt=document.querySelector('input[name=fmt]:checked').value;
+    lastTikz=fmt==='standalone'?STANDALONE_PRE+frag+'\n\\end{document}\n':frag;
+    $('tikzOut').value=lastTikz;
+    err.className='ok';
+    err.textContent=`✓  type: ${prettyPoly(ast.dom)} → ${prettyPoly(ast.cod)}`;
+  }catch(ex){
+    err.className='bad';
+    err.textContent=(ex.msg||String(ex))+(ex.pos!==undefined?`   (at position ${ex.pos+1})`:'');
+    if(ex instanceof Error)console.error(ex);
+  }
+}
+
+/* click a box in the diagram to select that occurrence; slider rescales it
+   and the tape adapts (two occurrences of the same symbol are independent) */
+let bsOcc=null;
+$('canvas').addEventListener('click',ev=>{
+  const occ=ev.target.dataset&&ev.target.dataset.occ;
+  if(!occ)return;
+  bsOcc=occ;
+  const [nm,idx]=occ.split('#');
+  $('bsName').textContent=+idx>0?`${nm} (${+idx+1})`:nm;
+  $('bsRange').value=Math.round(((state.boxSc||{})[occ]||1)*100);
+  $('boxScaleUI').style.display='inline-flex';
+});
+$('bsRange').addEventListener('input',()=>{
+  if(!bsOcc)return;
+  state.boxSc=state.boxSc||{};
+  state.boxSc[bsOcc]=+$('bsRange').value/100;
+  update();saveState();
+});
+$('bsReset').onclick=()=>{
+  if(bsOcc&&state.boxSc){delete state.boxSc[bsOcc];$('bsRange').value=100;update();saveState();}
+};
+
+$('termIn').addEventListener('input',()=>{update();saveState();});
+$('zoom').addEventListener('input',update);
+$('labelsChk').addEventListener('change',()=>{update();saveState();});
+document.querySelectorAll('input[name=fmt]').forEach(r=>r.addEventListener('change',()=>{update();saveState();}));
+
+$('copyBtn').onclick=async()=>{
+  await navigator.clipboard.writeText(lastTikz);
+  $('copied').style.opacity=1;
+  setTimeout(()=>$('copied').style.opacity=0,1200);
+};
+function download(name,text,mime){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([text],{type:mime}));
+  a.download=name;a.click();URL.revokeObjectURL(a.href);
+}
+$('dlBtn').onclick=()=>{
+  const fmt=document.querySelector('input[name=fmt]:checked').value;
+  download(fmt==='standalone'?'tape.tex':'tape.tikz',lastTikz,'text/plain');
+};
+$('dlSvg').onclick=()=>download('tape.svg',lastSvg,'image/svg+xml');
+
+/* init */
+renderSig();
+$('termIn').value=state.term;
+$('zoom').value=state.zoom;
+$('labelsChk').checked=state.labels;
+document.querySelector(`input[name=fmt][value=${state.fmt}]`).checked=true;
+update();
+</script>
+</body>
+</html>
