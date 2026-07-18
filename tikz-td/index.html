@@ -74,6 +74,7 @@
         <tr><td>circuit in a tape</td><td><code>[ c ]</code></td></tr>
         <tr><td>composition</td><td><code>;</code></td></tr>
         <tr><td>⊕-tensor</td><td><code>+</code></td></tr>
+        <tr><td>⊗-tensor (whiskered)</td><td><code>*</code></td></tr>
         <tr><td>identity</sub></i></td><td><code>id(U)</code>, <code>id0</code></td></tr>
         <tr><td>symmetry</td><td><code>swap(U,V)</code></td></tr>
         <tr><td>diagonal</td><td><code>copy(U)</code></td></tr>
@@ -269,9 +270,17 @@ function parse(src){
     }
     throw {msg:`unexpected “${tk.t}”`,pos:tk.pos};
   }
+  function tProd(){
+    let a=tAtom();
+    while(peek()&&peek().t==='*'){
+      eat('*');const b=tAtom();
+      a={k:'tprod',a,b,pos:a.pos};
+    }
+    return a;
+  }
   function tSum(){
-    const cs=[tAtom()];
-    while(peek()&&peek().t==='+'){eat('+');cs.push(tAtom());}
+    const cs=[tProd()];
+    while(peek()&&peek().t==='+'){eat('+');cs.push(tProd());}
     return cs.length===1?cs[0]:{k:'tsum',cs,pos:cs[0].pos};
   }
   function tSeq(){
@@ -318,6 +327,88 @@ function ctypecheck(node,sig,added){
   }
   return node;
 }
+/* ---- derived ⊗ on tapes (eq. 7.2 / Table 7 of the paper) ----
+   t1 ⊗ t2 = L_P(t2) ; R_S(t1) for t1: P→Q, t2: R→S.
+   Monomial whiskerings prepend/append a word to every generator; polynomial
+   left-whiskering is a ⊕ of monomial ones; polynomial right-whiskering
+   threads through the left distributors δl (built from ⊕-symmetries). */
+function cloneC(n){
+  const m={...n};
+  if(n.cs)m.cs=n.cs.map(cloneC);
+  if(n.c)m.c=cloneC(n.c);
+  return m;
+}
+const tidP=P=>P.length===0?{k:'tid0'}
+  :P.length===1?{k:'tid',word:P[0]}
+  :{k:'tsum',cs:P.map(w=>({k:'tid',word:w}))};
+const isIdT=n=>n.k==='tid0'||n.k==='tid'||(n.k==='tsum'&&n.cs.every(isIdT));
+const sumT=cs=>{
+  const xs=cs.filter(c=>c.k!=='tid0').flatMap(c=>c.k==='tsum'?c.cs:[c]);
+  return xs.length===0?{k:'tid0'}:xs.length===1?xs[0]:{k:'tsum',cs:xs};
+};
+const seqT=cs=>{
+  const xs=cs.filter(c=>!isIdT(c)).flatMap(c=>c.k==='tseq'?c.cs:[c]);
+  return xs.length===0?cs[0]:xs.length===1?xs[0]:{k:'tseq',cs:xs};
+};
+const prodP=(P,Q)=>P.flatMap(u=>Q.map(v=>[...u,...v]));
+function whiskW(U,t,left){          // L_U / R_U on a desugared tape term
+  const j=w=>left?[...U,...w]:[...w,...U];
+  switch(t.k){
+    case 'tid0':return {k:'tid0'};
+    case 'tid':return {k:'tid',word:j(t.word)};
+    case 'tcirc':{
+      const c=cloneC(t.c);
+      if(U.length===0)return {k:'tcirc',c};
+      const idc={k:'cid',word:[...U]};
+      return {k:'tcirc',c:{k:'cpar',cs:left?[idc,c]:[c,idc]}};
+    }
+    case 'tswap':return {k:'tswap',u:j(t.u),v:j(t.v)};
+    case 'tcopy':return {k:'tcopy',word:j(t.word)};
+    case 'tcocopy':return {k:'tcocopy',word:j(t.word)};
+    case 'tdisc':return {k:'tdisc',word:j(t.word)};
+    case 'tcodisc':return {k:'tcodisc',word:j(t.word)};
+    case 'ttr':return {k:'ttr',u:j(t.u),c:whiskW(U,t.c,left)};
+    case 'tseq':return {k:'tseq',cs:t.cs.map(c=>whiskW(U,c,left))};
+    case 'tsum':return {k:'tsum',cs:t.cs.map(c=>whiskW(U,c,left))};
+  }
+}
+function swapWP(U,Q){               // σ⊕: U ⊕ Q → Q ⊕ U (word vs polynomial)
+  if(Q.length===0)return {k:'tid',word:[...U]};
+  const [V,...Qr]=Q;
+  return seqT([sumT([{k:'tswap',u:[...U],v:[...V]},tidP(Qr)]),
+               sumT([tidP([V]),swapWP(U,Qr)])]);
+}
+function swapPP(P,Q){               // σ⊕: P ⊕ Q → Q ⊕ P (block symmetry)
+  if(P.length===0||Q.length===0)return tidP([...P,...Q]);
+  const [U,...Pr]=P;
+  return seqT([sumT([tidP([U]),swapPP(Pr,Q)]),
+               sumT([swapWP(U,Q),tidP(Pr)])]);
+}
+function deltaL(P,Q,R,inv){         // δl_{P,Q,R}: P⊗(Q⊕R) → P⊗Q ⊕ P⊗R (or inverse)
+  if(P.length<=1)return tidP(prodP(P,[...Q,...R]));
+  const [U,...Pr]=P;
+  const UQ=prodP([U],Q),UR=prodP([U],R);
+  const a=sumT([tidP([...UQ,...UR]),deltaL(Pr,Q,R,inv)]);
+  const b=sumT([tidP(UQ),
+                inv?swapPP(prodP(Pr,Q),UR):swapPP(UR,prodP(Pr,Q)),
+                tidP(prodP(Pr,R))]);
+  return inv?seqT([b,a]):seqT([a,b]);
+}
+function whiskP(X,t,left){          // polynomial whiskerings L_X / R_X
+  if(X.length===0)return {k:'tid0'};
+  if(left)return sumT(X.map(U=>whiskW(U,t,true)));
+  if(X.length===1)return whiskW(X[0],t,false);
+  const [W,...Xr]=X;
+  return seqT([deltaL(t.dom,[W],Xr,false),
+               sumT([whiskW(W,t,false),whiskP(Xr,t,false)]),
+               deltaL(t.cod,[W],Xr,true)]);
+}
+function stampPos(n,pos){
+  if(n.pos===undefined)n.pos=pos;
+  if(n.cs)n.cs.forEach(c=>stampPos(c,pos));
+  if(n.c)stampPos(n.c,pos);
+}
+
 function ttypecheck(node,sig,added){
   switch(node.k){
     case 'tid0': node.dom=[];node.cod=[];break;
@@ -337,6 +428,21 @@ function ttypecheck(node,sig,added){
       if(node.c.cod.length===0||!wordEq(node.c.cod[0],node.u))
         throw {msg:`tr(${prettyWord(node.u)}): body must have codomain ${prettyWord(node.u)} ⊕ … but has ${prettyPoly(node.c.cod)}`,pos:node.pos};
       node.dom=node.c.dom.slice(1);node.cod=node.c.cod.slice(1);break;
+    case 'tprod':{
+      ttypecheck(node.a,sig,added);
+      ttypecheck(node.b,sig,added);
+      const P=node.a.dom,Q=node.a.cod,R=node.b.dom,S=node.b.cod;
+      // t1 ⊗ t2 = L_P(t2) ; R_S(t1)
+      const desug=seqT([whiskP(P,node.b,true),whiskP(S,node.a,false)]);
+      stampPos(desug,node.pos);
+      const pos=node.pos;
+      Object.keys(node).forEach(f=>delete node[f]);
+      Object.assign(node,desug);node.pos=pos;
+      ttypecheck(node,sig,added);
+      if(!polyEq(node.dom,prodP(P,R))||!polyEq(node.cod,prodP(Q,S)))
+        throw {msg:'internal error: ⊗ expansion produced the wrong type',pos};
+      return node;
+    }
     case 'tstar':{
       ttypecheck(node.c,sig,added);
       if(node.c.dom.length!==1||!polyEq(node.c.dom,node.c.cod))
