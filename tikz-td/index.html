@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>tikz-td — tape diagram editor for Kleene-Cartesian rig categories</title>
+<title>tikz-td — tape diagram editor for rig categories</title>
 <style>
   :root{
     --bg:#111111; --panel:#1c1c1c; --border:rgba(243,243,243,.16); --ink:#f3f3f3;
@@ -909,8 +909,8 @@ function tmeasure(node){
       // theory generator: input band → n stacked output bands, white node
       const hS=node.lpH[0],hs=node.rpH,W=node.word;
       const rN=genNodeR(hS,node.name);
-      if(node.n===0){                     // constant: U → 0, a capped node
-        node.h=Math.max(hS,2*rN);node.natW=rN+1.25;
+      if(node.n===0){       // arity 0: tape ends in the node, nothing right of it
+        node.h=Math.max(hS,2*rN);node.natW=2*rN+0.35;
         node.lp=[{off:0,h:hS,word:W}];node.rp=[];break;
       }
       const hTot=hs.reduce((a,b)=>a+b,0)+GAP*(node.n-1);
@@ -1036,12 +1036,12 @@ function tgenGeom(nw,hS,branches,k,label){
   const n=branches.length;
   const r=genNodeR(hS,label);     // covers the tape, slightly overflowing
   const xNode=r+0.35;
-  if(n===0){                        // constant U → 0: a capped node
-    const xe=nw-0.5,xt=nw;
-    const top=S(0,hS/2,xe,hS/2),c1=S(xe,hS/2,xt,0,0,90),
-          c2=S(xt,0,xe,-hS/2,-90,0),bot=S(0,-hS/2,xe,-hS/2);
-    B.push(top,c1,c2,bot);
-    F.push({segs:[top,c1,c2,revSeg(bot),S(0,-hS/2,0,hS/2)]});
+  if(n===0){        // arity 0: the incoming tape just ends in the node —
+                    // no cap, no tape to its right (the disc hides the end)
+    const top=S(0,hS/2,xNode,hS/2),bot=S(0,-hS/2,xNode,-hS/2),
+          endE=S(xNode,hS/2,xNode,-hS/2);
+    B.push(top,endE,bot);          // endE closes the loop, covered by the node
+    F.push({segs:[top,endE,revSeg(bot),S(0,-hS/2,0,hS/2)]});
     wireOffs(k).forEach(o=>P.push({t:'wire',x1:0,y1:o,x2:xNode,y2:0,
       c1x:0.45*xNode,c1y:o,c2x:0.75*xNode,c2y:0}));
     return {B,P,F,node:{x:xNode,y:0,r,label}};
