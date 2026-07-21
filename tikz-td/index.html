@@ -31,8 +31,8 @@
   table.sig input.word{width:56px;text-align:center}
   table.sig .del{cursor:pointer;color:var(--muted);border:none;background:none;font-size:14px}
   table.sig .del:hover{color:var(--err)}
-  #addSym{margin-top:4px;font-size:12px;background:none;border:1px dashed var(--border);border-radius:6px;padding:3px 10px;cursor:pointer;color:var(--muted)}
-  #addSym:hover{color:var(--accent);border-color:var(--accent)}
+  #addSym,#addAlgSym{margin-top:4px;font-size:12px;background:none;border:1px dashed var(--border);border-radius:6px;padding:3px 10px;cursor:pointer;color:var(--muted)}
+  #addSym:hover,#addAlgSym:hover{color:var(--accent);border-color:var(--accent)}
   select,textarea{font-family:ui-monospace,'SF Mono',Menlo,monospace}
   .help{font-size:11.5px;color:var(--muted);line-height:1.55}
   .help code{background:rgba(243,243,243,.09);padding:0 4px;border-radius:3px;font-size:11px;cursor:pointer}
@@ -81,8 +81,9 @@
         <tr><td>bang</td><td><code>disc(U)</code></td></tr>
         <tr><td>codiagonal</td><td><code>cocopy(U)</code></td></tr>
         <tr><td>cobang</td><td><code>codisc(U)</code></td></tr>
-        <tr><td>trace</td><td><code>tr(U){t}</code></td></tr>
+        <tr><td>trace<sub>U</sub></td><td><code>tr(U){t}</code></td></tr>
         <tr><td>Kleene star</td><td><code>star(t)</code></td></tr>
+        <tr><td>algebraic symbol</td><td><code>p(U)</code></td></tr>
       </tbody>
     </table>
     <h2>Circuit layer (inside [ ])</h2>
@@ -110,9 +111,12 @@
       <code>copy(A B) ; (id(A B) + [swap(A,B)])</code><br>
       <code>disc(A) + codisc(B)</code>
     </div> -->
-    <h2>Signature</h2>
+    <h2>Monoidal signature</h2>
     <table class="sig"><tbody id="sigBody"></tbody></table>
     <button id="addSym">+ add symbol</button>
+    <h2>Algebraic signature</h2>
+    <table class="sig"><tbody id="algBody"></tbody></table>
+    <button id="addAlgSym">+ add symbol</button>
   </div>
 
   <div class="col" id="center">
@@ -164,6 +168,7 @@ const bandH=k=>k>0?0.5*k+0.3:0.5;
 const wireOffs=k=>Array.from({length:k},(_,i)=>((k-1)/2-i)*0.5);
 let CSQ=1;                    // vertical squeeze applied to circuit boxes
 let BOXSC={};                 // per-occurrence user box scale (click a box to set)
+let ALGSIG=[];                // algebraic signature: [{name, n}] theory operations
 
 const KEYWORDS=new Set(['id','id0','id1','swap','copy','disc','cocopy','codisc','tr','star']);
 const ALIAS={discard:'disc',codiscard:'codisc',sym:'swap',dup:'copy',bang:'disc',cobang:'codisc',merge:'cocopy'};
@@ -189,16 +194,24 @@ function parse(src){
   const eat=t=>{if(!ts[p]||ts[p].t!==t)throw {msg:`expected “${t}”`,pos:ts[p]?ts[p].pos:src.length};return ts[p++];};
   const isName=v=>peek()&&peek().t==='name'&&(v===undefined||peek().v===v);
 
+  /* 0 is reserved everywhere for the zero object, and may only appear as a
+     TAPE TYPE (copy(0), disc(0), id(0), …) — never inside a word, never as a
+     term. tWord() returns null for it; word() is the strict monomial parser. */
+  const isZero=()=>peek()&&peek().t==='name'&&peek().v==='0';
   function word(){            // sorts separated by spaces or *
     const sorts=[];
     if(isName('1')){p++;return sorts;}
     while(isName()){
+      if(peek().v==='0')throw {msg:'0 is the zero object — it cannot appear inside a word (use 1 for the empty word)',pos:peek().pos};
       sorts.push(peek().v);p++;
       if(peek()&&peek().t==='*')p++;
     }
     if(!sorts.length)throw {msg:'expected a word (sorts separated by spaces, or 1)',pos:peek()?peek().pos:src.length};
     return sorts;
   }
+  const tWord=()=>{if(isZero()){p++;return null;}return word();};   // null = 0
+  function targs1(){eat('(');const u=tWord();eat(')');return u;}
+  function targs2(){eat('(');const u=tWord();eat(',');const v=tWord();eat(')');return [u,v];}
   function args1(){eat('(');const u=word();eat(')');return u;}
   function args2(){eat('(');const u=word();eat(',');const v=word();eat(')');return [u,v];}
 
@@ -209,6 +222,7 @@ function parse(src){
     if(tk.t==='('){eat('(');const e=cSeq();eat(')');return e;}
     if(tk.t==='name'){
       const nm=ALIAS[tk.v]||tk.v;
+      if(nm==='0')throw {msg:'0 is the zero object — circuits are typed by words, use 1 for the empty word',pos:tk.pos};
       if(nm==='id1'){p++;return {k:'cid1',pos:tk.pos};}
       if(nm==='id'){p++;const u=args1();return {k:'cid',word:u,pos:tk.pos};}
       if(nm==='swap'){p++;const [u,v]=args2();return {k:'cswap',u,v,pos:tk.pos};}
@@ -248,22 +262,49 @@ function parse(src){
     if(tk.t==='['){eat('[');const c=cSeq();eat(']');return {k:'tcirc',c,pos:tk.pos};}
     if(tk.t==='name'){
       const nm=ALIAS[tk.v]||tk.v;
+      if(nm==='0')throw {msg:'0 is the zero object (a type), not a term — write it as a type, e.g. id(0) or copy(0)',pos:tk.pos};
       if(nm==='id0'){p++;return {k:'tid0',pos:tk.pos};}
       if(nm==='id1'){p++;return {k:'tid',word:[],pos:tk.pos};}
-      if(nm==='id'){p++;const u=args1();return {k:'tid',word:u,pos:tk.pos};}
-      if(nm==='swap'){p++;const [u,v]=args2();return {k:'tswap',u,v,pos:tk.pos};}
+      // at the zero object every one of these collapses to id_0 (Table 3)
+      if(nm==='id'){p++;const u=targs1();return u===null?{k:'tid0',pos:tk.pos}:{k:'tid',word:u,pos:tk.pos};}
+      if(nm==='swap'){
+        p++;const [u,v]=targs2();
+        if(u===null&&v===null)return {k:'tid0',pos:tk.pos};
+        if(u===null)return {k:'tid',word:v,pos:tk.pos};      // σ⊕_{0,V} = id_V
+        if(v===null)return {k:'tid',word:u,pos:tk.pos};
+        return {k:'tswap',u,v,pos:tk.pos};
+      }
       if(['copy','disc','cocopy','codisc'].includes(nm)){
-        p++;const u=args1();return {k:'t'+nm,word:u,pos:tk.pos};
+        p++;const u=targs1();
+        return u===null?{k:'tid0',pos:tk.pos}:{k:'t'+nm,word:u,pos:tk.pos};
       }
       if(nm==='tr'){
-        p++;eat('(');const u=word();
+        p++;eat('(');const u=tWord();
         let body;
         if(peek()&&peek().t===','){eat(',');body=tSeq();eat(')');}
         else {eat(')');eat('{');body=tSeq();eat('}');}
+        if(u===null)return body;                              // tr_0(t) = t
         return {k:'ttr',u,c:body,pos:tk.pos};
       }
       if(nm==='star'){p++;eat('(');const body=tSeq();eat(')');return {k:'tstar',c:body,pos:tk.pos};}
       p++;
+      // theory generator p(U) : U → U ⊕ … ⊕ U — the arity comes from the
+      // algebraic signature; p(U, n) declares/uses arity n inline
+      if(peek()&&peek().t==='('){
+        eat('(');
+        const u=tWord();
+        let n=null;
+        if(peek()&&peek().t===','){
+          eat(',');const nt=peek();
+          if(!nt||nt.t!=='name'||!/^\d+$/.test(nt.v))
+            throw {msg:'expected a natural number (the arity) after the comma, e.g. p(A, 3)',pos:nt?nt.pos:src.length};
+          p++;n=parseInt(nt.v,10);
+        }
+        eat(')');
+        // p(0) : 0 → 0 ⊕ … ⊕ 0 = 0, the empty diagram
+        if(u===null)return {k:'tid0',pos:tk.pos};
+        return {k:'tgen',name:tk.v,word:u,n,pos:tk.pos};
+      }
       let b={k:'box',name:tk.v,op:false,pos:tk.pos};
       while(peek()&&peek().t==="'"){eat("'");b={...b,op:!b.op};}
       return {k:'tcirc',c:b,pos:tk.pos};   // bare generator ⇒ [f]
@@ -363,6 +404,7 @@ function whiskW(U,t,left){          // L_U / R_U on a desugared tape term
       return {k:'tcirc',c:{k:'cpar',cs:left?[idc,c]:[c,idc]}};
     }
     case 'tswap':return {k:'tswap',u:j(t.u),v:j(t.v)};
+    case 'tgen':return {k:'tgen',name:t.name,word:j(t.word),n:t.n};  // L_U/R_U: (|f|)_{UV}
     case 'tcopy':return {k:'tcopy',word:j(t.word)};
     case 'tcocopy':return {k:'tcocopy',word:j(t.word)};
     case 'tdisc':return {k:'tdisc',word:j(t.word)};
@@ -415,6 +457,13 @@ function ttypecheck(node,sig,added){
     case 'tid': node.dom=[node.word];node.cod=[node.word];break;
     case 'tswap': node.dom=[node.u,node.v];node.cod=[node.v,node.u];break;
     case 'tcopy': node.dom=[node.word];node.cod=[node.word,node.word];break;
+    case 'tgen':{
+      // arity from the algebraic signature; an inline p(U,n) declares it
+      let e=ALGSIG.find(s=>s.name===node.name);
+      if(!e){e={name:node.name,n:node.n??2,auto:true};ALGSIG.push(e);}
+      if(node.n==null)node.n=e.n;
+      node.dom=[node.word];node.cod=Array.from({length:node.n},()=>node.word);break;
+    }
     case 'tdisc': node.dom=[node.word];node.cod=[];break;
     case 'tcocopy': node.dom=[node.word,node.word];node.cod=[node.word];break;
     case 'tcodisc': node.dom=[];node.cod=[node.word];break;
@@ -474,6 +523,13 @@ function collectNames(node,set){
   if(node.k==='box')set.add(node.name);
   if(node.cs)node.cs.forEach(c=>collectNames(c,set));
   if(node.c)collectNames(node.c,set);
+  return set;
+}
+function collectAlgNames(node,set){
+  set=set||new Set();
+  if(node.k==='tgen')set.add(node.name);
+  if(node.cs)node.cs.forEach(c=>collectAlgNames(c,set));
+  if(node.c)collectAlgNames(node.c,set);
   return set;
 }
 
@@ -656,7 +712,8 @@ const S=(x1,y1,x2,y2,out_,in_,loose)=>{
 };
 const revSeg=s=>({x1:s.x2,y1:s.y2,x2:s.x1,y2:s.y1,
   ...(s.out!==undefined?{out:s.in,in:s.out}:{}),
-  ...(s.loose?{loose:s.loose}:{})});
+  ...(s.loose?{loose:s.loose}:{}),
+  ...(s.c1x!==undefined?{c1x:s.c2x,c1y:s.c2y,c2x:s.c1x,c2y:s.c1y}:{})});
 function seg(B,x1,y1,x2,y2,out_,in_,loose){B.push(S(x1,y1,x2,y2,out_,in_,loose));}
 /* Tapes are PAINTED as the union of per-piece fills (ctx.F) — this renders
    self-crossing bands (yanking) and bands through trace holes correctly with
@@ -744,6 +801,10 @@ function resolveHeights(root){
       case 'tcocopy':
         union(K(n,'r',0),K(n,'l',0));union(K(n,'l',0),K(n,'l',1));
         demand(K(n,'r',0),bandH(n.word.length));return;
+      case 'tgen':
+        // input and all n outputs are the same band class → uniform thickness
+        for(let i=0;i<n.n;i++)union(K(n,'l',0),K(n,'r',i));
+        demand(K(n,'l',0),bandH(n.word.length));return;
       case 'tdisc':demand(K(n,'l',0),bandH(n.word.length));return;
       case 'tcodisc':demand(K(n,'r',0),bandH(n.word.length));return;
       case 'ttr':
@@ -784,7 +845,7 @@ function resolveHeights(root){
   dem.forEach(([k,h])=>{const r=find(k);H.set(r,Math.max(H.get(r)||0,h));});
   (function apply(n){
     const res=(s,i)=>H.get(find(K(n,s,i)))||bandH(1);
-    if(['tid','tcirc','tswap','tcopy','tcocopy','tdisc','tcodisc','ttr'].includes(n.k)){
+    if(['tid','tcirc','tswap','tcopy','tcocopy','tgen','tdisc','tcodisc','ttr'].includes(n.k)){
       n.lpH=n.dom.map((_,i)=>res('l',i));
       n.rpH=n.cod.map((_,i)=>res('r',i));
     }
@@ -842,6 +903,22 @@ function tmeasure(node){
                +0.3*Math.max(0,hTot-2*bandH(node.word.length)-GAP);
       node.lp=[{off:hTot/2-h1/2,h:h1,word:node.word},{off:-hTot/2+h2/2,h:h2,word:node.word}];
       node.rp=[{off:0,h:hS,word:node.word}];
+      break;
+    }
+    case 'tgen':{
+      // theory generator: input band → n stacked output bands, white node
+      const hS=node.lpH[0],hs=node.rpH,W=node.word;
+      const rN=genNodeR(hS,node.name);
+      if(node.n===0){                     // constant: U → 0, a capped node
+        node.h=Math.max(hS,2*rN);node.natW=rN+1.25;
+        node.lp=[{off:0,h:hS,word:W}];node.rp=[];break;
+      }
+      const hTot=hs.reduce((a,b)=>a+b,0)+GAP*(node.n-1);
+      node.h=Math.max(hTot,hS,2*rN);
+      node.natW=(rN+0.35)+1.35+0.12*Math.max(0,W.length-1)+0.35*Math.max(0,hTot-hS);
+      node.lp=[{off:0,h:hS,word:W}];
+      node.rp=[];let cum=0;
+      hs.forEach(h=>{node.rp.push({off:hTot/2-cum-h/2,h,word:W});cum+=h+GAP;});
       break;
     }
     case 'tdisc':{
@@ -943,6 +1020,91 @@ function forkGeom(nw,huS,huB1,huB2,y1,y2,k){
   });
   return {B,P,F};
 }
+/* node radius of a theory generator: big enough to cover the tape height,
+   poking slightly past the borders (it is not a box — it need not sit
+   inside the tape), like the paper's t_U glyph */
+const genNodeR=(hS,label)=>Math.max(hS/2+0.14,0.13*label.length+0.16);
+/* theory generator (|g|)_U : U → U ⊕ … ⊕ U, drawn as an n-way fan with a
+   white node labelled g at the convergence (arXiv:2503.22819).
+   Each branch is a PARALLEL TUBE: both edges and every wire are the same
+   cubic (shared control x's, differing only by a vertical shift), so
+   containment is exact by construction and the curvature is the uniform
+   S-family used everywhere else. All tgen port heights are equal (the
+   generator conducts height), so the tubes and the trunk share h = hS. */
+function tgenGeom(nw,hS,branches,k,label){
+  const B=[],P=[],F=[];
+  const n=branches.length;
+  const r=genNodeR(hS,label);     // covers the tape, slightly overflowing
+  const xNode=r+0.35;
+  if(n===0){                        // constant U → 0: a capped node
+    const xe=nw-0.5,xt=nw;
+    const top=S(0,hS/2,xe,hS/2),c1=S(xe,hS/2,xt,0,0,90),
+          c2=S(xt,0,xe,-hS/2,-90,0),bot=S(0,-hS/2,xe,-hS/2);
+    B.push(top,c1,c2,bot);
+    F.push({segs:[top,c1,c2,revSeg(bot),S(0,-hS/2,0,hS/2)]});
+    wireOffs(k).forEach(o=>P.push({t:'wire',x1:0,y1:o,x2:xNode,y2:0,
+      c1x:0.45*xNode,c1y:o,c2x:0.75*xNode,c2y:0}));
+    return {B,P,F,node:{x:xNode,y:0,r,label}};
+  }
+  const h=hS,xJ=xNode;
+  // common control offset from the OUTERMOST branch → all cubics share one
+  // x-parameterisation, so tubes and wires are nested pointwise
+  const maxOff=Math.max(...branches.map(b=>Math.abs(b.off)));
+  const rr=Math.min(0.3993*0.9*Math.hypot(nw-xJ,maxOff),0.52*(nw-xJ));
+  const cub=(y0,y1)=>[[xJ,y0],[xJ+rr,y0],[nw-rr,y1],[nw,y1]];
+  const evalC=(C,t)=>{const u=1-t;return [
+    u*u*u*C[0][0]+3*u*u*t*C[1][0]+3*u*t*t*C[2][0]+t*t*t*C[3][0],
+    u*u*u*C[0][1]+3*u*u*t*C[1][1]+3*u*t*t*C[2][1]+t*t*t*C[3][1]];};
+  const segOf=C=>({x1:C[0][0],y1:C[0][1],x2:C[3][0],y2:C[3][1],
+    c1x:C[1][0],c1y:C[1][1],c2x:C[2][0],c2y:C[2][1]});
+  const rightSplit=(C,t)=>{               // de Casteljau, right part
+    const lp=(a,b)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t];
+    const p01=lp(C[0],C[1]),p12=lp(C[1],C[2]),p23=lp(C[2],C[3]);
+    const p012=lp(p01,p12),p123=lp(p12,p23);
+    return [lp(p012,p123),p123,p23,C[3]];
+  };
+  // trunk rectangle [0, xJ]
+  const tT=S(0,h/2,xJ,h/2),tB=S(0,-h/2,xJ,-h/2);
+  B.push(tT,tB);
+  F.push({segs:[tT,S(xJ,h/2,xJ,-h/2),revSeg(tB),S(0,-h/2,0,h/2)]});
+  // tubes: edges are the centreline shifted ±h/2 (exact parallels)
+  const topE=branches.map(b=>cub(h/2,b.off+h/2));
+  const botE=branches.map(b=>cub(-h/2,b.off-h/2));
+  branches.forEach((b,i)=>{
+    F.push({segs:[segOf(topE[i]),S(nw,b.off+h/2,nw,b.off-h/2),
+                  revSeg(segOf(botE[i])),S(xJ,-h/2,xJ,h/2)]});
+  });
+  // silhouette: full outer edges of the outermost tubes…
+  B.push(segOf(topE[0]),segOf(botE[n-1]));
+  // …and between neighbours, the tails of the facing edges past their crossing
+  for(let i=0;i+1<n;i++){
+    const A=botE[i],Bc=topE[i+1];
+    const tOfX=(C,x)=>{let lo=0,hi=1;
+      for(let it=0;it<40;it++){const m=(lo+hi)/2;(evalC(C,m)[0]<x)?lo=m:hi=m;}
+      return (lo+hi)/2;};
+    const yAtX=(C,x)=>evalC(C,tOfX(C,x))[1];
+    let lo=xJ+1e-4,hi=nw-1e-4;
+    for(let it=0;it<48;it++){const m=(lo+hi)/2;
+      (yAtX(A,m)-yAtX(Bc,m)<0)?lo=m:hi=m;}
+    const xStar=(lo+hi)/2;
+    const M=[xStar,(yAtX(A,xStar)+yAtX(Bc,xStar))/2];
+    const At=rightSplit(A,tOfX(A,xStar));At[0]=M;
+    const Bt=rightSplit(Bc,tOfX(Bc,xStar));Bt[0]=M;
+    B.push(segOf(At),segOf(Bt));
+  }
+  // wires: trunk sub-wires converge into the node…
+  wireOffs(k).forEach(o=>P.push({t:'wire',x1:0,y1:o,x2:xNode,y2:0,
+    c1x:0.45*xNode,c1y:o,c2x:0.75*xNode,c2y:0}));
+  // …and each branch bundle leaves the node along the tube centreline,
+  // fanning to its offsets toward the output (end-shifted parallel cubics)
+  branches.forEach(b=>{
+    const C=cub(0,b.off);
+    wireOffs(k).forEach(o=>P.push({t:'wire',x1:xNode,y1:0,x2:nw,y2:b.off+o,
+      c1x:C[1][0],c1y:C[1][1],c2x:C[2][0],c2y:C[2][1]+o}));
+  });
+  return {B,P,F,node:{x:xNode,y:0,r,label}};
+}
+
 /* x-coordinate of the rounded cap boundary at wire height o, so cap wires
    run all the way to the tape border. Cap: bezier from (xe,±h/2) to the tip
    (xt,0), horizontal at xe, vertical at the tip. */
@@ -971,10 +1133,12 @@ function mirrorGeom(g,W){
   return {B:g.B.map(m),P:g.P.map(m),F:g.F.map(f=>({segs:f.segs.map(m)}))};
 }
 function emitGeom(ctx,g,dx,dy){
-  const t=s=>({...s,x1:s.x1+dx,y1:s.y1+dy,x2:s.x2+dx,y2:s.y2+dy});
+  const t=s=>({...s,x1:s.x1+dx,y1:s.y1+dy,x2:s.x2+dx,y2:s.y2+dy,
+    ...(s.c1x!==undefined?{c1x:s.c1x+dx,c1y:s.c1y+dy,c2x:s.c2x+dx,c2y:s.c2y+dy}:{})});
   g.B.forEach(s=>ctx.B.push(t(s)));
   g.P.forEach(s=>ctx.P.push(t(s)));
   g.F.forEach(f=>ctx.F.push({segs:f.segs.map(t)}));
+  if(g.node)ctx.P.push({t:'wnode',x:g.node.x+dx,y:g.node.y+dy,r:g.node.r,label:g.node.label});
 }
 
 /* place a fixed-size piece centered in width w, padding with band extensions */
@@ -1045,6 +1209,11 @@ function tplace(node,x,cy,w,ctx){
     case 'tcocopy': padded(node,x,cy,w,ctx,(x0,nw)=>{
       const g=mirrorGeom(forkGeom(nw,node.rp[0].h,node.lp[0].h,node.lp[1].h,
                        node.lp[0].off,node.lp[1].off,node.word.length),nw);
+      emitGeom(ctx,g,x0,cy);
+    });break;
+    case 'tgen': padded(node,x,cy,w,ctx,(x0,nw)=>{
+      const g=tgenGeom(nw,node.lp[0].h,node.rp.map(p=>({off:p.off,h:p.h})),
+                       node.word.length,node.name);
       emitGeom(ctx,g,x0,cy);
     });break;
     case 'tdisc': padded(node,x,cy,w,ctx,(x0,nw)=>{
@@ -1137,14 +1306,14 @@ function mergeWires(P){
   const key=(x,y)=>Math.round(x*1e4)+'|'+Math.round(y*1e4);
   const stop=new Set();
   for(const p of P){
-    if(p.t==='dot')stop.add(key(p.x,p.y));
+    if(p.t==='dot'||p.t==='wnode')stop.add(key(p.x,p.y));
     if(p.t==='box'){stop.add(key(p.cx-p.bw/2,p.cy));stop.add(key(p.cx+p.bw/2,p.cy));}
   }
   const rest=P.filter(p=>p.t!=='wire');
   let wires=P.filter(p=>p.t==='wire');
   // fuse only collinear horizontal straights — an S-curve absorbed into a longer
   // span would take a lazy diagonal and leave its tape
-  const isH=w=>w.out===undefined&&Math.abs(w.y1-w.y2)<1e-6;
+  const isH=w=>w.out===undefined&&w.c1x===undefined&&Math.abs(w.y1-w.y2)<1e-6;
   let changed=true;
   while(changed){
     changed=false;
@@ -1172,7 +1341,7 @@ function mergeWires(P){
 function mergeBounds(B){
   const key=(x,y)=>Math.round(x*1e4)+'|'+Math.round(y*1e4);
   let segs=B.slice(),changed=true;
-  const isL=s=>s.out===undefined;
+  const isL=s=>s.out===undefined&&s.c1x===undefined;
   while(changed){
     changed=false;
     outer:
@@ -1206,7 +1375,8 @@ function assembleLoops(B){
   const key=(x,y)=>Math.round(x*1e4)+'|'+Math.round(y*1e4);
   const rev=s=>({x1:s.x2,y1:s.y2,x2:s.x1,y2:s.y1,
                  ...(s.out!==undefined?{out:s.in,in:s.out}:{}),
-                 ...(s.loose?{loose:s.loose}:{})});
+                 ...(s.loose?{loose:s.loose}:{}),
+                 ...(s.c1x!==undefined?{c1x:s.c2x,c1y:s.c2y,c2x:s.c1x,c2y:s.c1y}:{})});
   const unused=new Set(B.map((_,i)=>i));
   const endpoints=new Map();
   const add=(k,i,end)=>{const a=endpoints.get(k);const e={i,end};a?a.push(e):endpoints.set(k,[e]);};
@@ -1250,7 +1420,12 @@ function bezPts(x1,y1,x2,y2,out_,in_,loose){
 function flattenLoop(loop){
   const pts=[[loop[0].x1,loop[0].y1]];
   for(const s of loop){
-    if(s.out===undefined)pts.push([s.x2,s.y2]);
+    if(s.c1x!==undefined){
+      for(let i=1;i<=8;i++){const t=i/8,u=1-t;
+        pts.push([u*u*u*s.x1+3*u*u*t*s.c1x+3*u*t*t*s.c2x+t*t*t*s.x2,
+                  u*u*u*s.y1+3*u*u*t*s.c1y+3*u*t*t*s.c2y+t*t*t*s.y2]);}
+    }
+    else if(s.out===undefined)pts.push([s.x2,s.y2]);
     else pts.push(...bezPts(s.x1,s.y1,s.x2,s.y2,s.out,s.in,s.loose));
   }
   return pts;
@@ -1267,7 +1442,7 @@ function layout(root){
     ports.forEach(p=>{
       seg(ctx.B,X,p.off-p.h/2,X,p.off+p.h/2);
       if(p.word.length===0){
-        labels.push({t:'label',x:X+(side<0?-0.45:0.45),y:p.off,text:'1'});
+        /* the unit type 1 carries no label */
       }else{
         const small=p.word.length>1;   // tighter pitch: shrink to avoid collisions
         wireOffs(p.word.length).forEach((o,i)=>{
@@ -1292,6 +1467,7 @@ function layout(root){
     if(p.t==='wire'){see(p.x1,p.y1);see(p.x2,p.y2);}
     else if(p.t==='box'){see(p.cx-p.bw/2,p.cy-p.bh/2);see(p.cx+p.bw/2,p.cy+p.bh/2);}
     else if(p.t==='dot')see(p.x,p.y);
+    else if(p.t==='wnode'){see(p.x-p.r,p.y-p.r);see(p.x+p.r,p.y+p.r);}
   }
   if(x1>x2){x1=0;y1=0;x2=1;y2=0.5;}
   return {prims:ctx.P,loops,fills:ctx.F,labels,bbox:{x1,y1,x2,y2}};
@@ -1300,6 +1476,8 @@ function layout(root){
 /* ---------------- SVG renderer ---------------- */
 const TAPE_BG='rgb(255,179,179)',TAPE_BORDER='rgb(255,102,102)';
 function segPath(s,X,Y){
+  if(s.c1x!==undefined)                        // explicit cubic controls
+    return `C ${X(s.c1x)} ${Y(s.c1y)}, ${X(s.c2x)} ${Y(s.c2y)}, ${X(s.x2)} ${Y(s.y2)}`;
   if(s.out===undefined)return `L ${X(s.x2)} ${Y(s.y2)}`;
   const d=Math.hypot(s.x2-s.x1,s.y2-s.y1),r=0.3993*d*(s.loose||1);
   const rad=a=>a*Math.PI/180;
@@ -1333,10 +1511,14 @@ function renderSVG(L,scalePx,showLabels){
     let d=`M ${X(p.x1)} ${Y(p.y1)} `+segPath(p,X,Y);
     out+=`<path d="${d}" fill="none" stroke="#000" stroke-width="${lw}" stroke-linecap="round"/>`;
   }
-  // dots & boxes
+  // dots, white nodes & boxes
   for(const p of L.prims){
     if(p.t==='dot')
       out+=`<circle cx="${X(p.x)}" cy="${Y(p.y)}" r="${Math.max(2.4,S*0.13)}" fill="#000"/>`;
+    else if(p.t==='wnode'){
+      out+=`<circle cx="${X(p.x)}" cy="${Y(p.y)}" r="${(p.r*S).toFixed(2)}" fill="#fff" stroke="${TAPE_BORDER}" stroke-width="${blw}"/>`;
+      out+=`<text x="${X(p.x)}" y="${Y(p.y)}" text-anchor="middle" dominant-baseline="central" font-family="STIX Two Math, Georgia, serif" font-style="italic" font-size="${Math.min(S*0.42,p.r*S*0.9).toFixed(1)}" fill="#000">${escXml(p.label)}</text>`;
+    }
     else if(p.t==='box'){
       const ch=0.14*S;
       const bx=X(p.cx-p.bw/2),by=Y(p.cy+p.bh/2),bw=p.bw*S,bh=p.bh*S;
@@ -1375,14 +1557,21 @@ function renderTikZ(L,showLabels){
     let out=pt(l.segs[0].x1,l.segs[0].y1);
     for(let i=0;i<l.segs.length;i++){
       const s=l.segs[i],last=i===l.segs.length-1;
-      out+=`\n\t\t\t to ${opts(s)}${last?'cycle':pt(s.x2,s.y2)}`;
+      const tgt=last?'cycle':pt(s.x2,s.y2);
+      if(s.c1x!==undefined)
+        out+=`\n\t\t\t .. controls (${fmtN(s.c1x)}, ${fmtN(s.c1y)}) and (${fmtN(s.c2x)}, ${fmtN(s.c2y)}) .. ${tgt}`;
+      else
+        out+=`\n\t\t\t to ${opts(s)}${tgt}`;
     }
     return out;
   };
-  // boxes & dots first (nodelayer)
+  // boxes, dots & white nodes first (nodelayer)
   for(const p of L.prims){
     if(p.t==='dot'){
       nodes.push(`\t\t\\node [style=black] (${nid++}) at (${fmtN(p.x)}, ${fmtN(p.y)}) {};`);
+    }else if(p.t==='wnode'){
+      const s=fmtN(2*p.r*0.25/0.295);   // like bbox: match the layout node size
+      nodes.push(`\t\t\\node [style=gennode, scale=${s}] (${nid++}) at (${fmtN(p.x)}, ${fmtN(p.y)}) {$${p.label}$};`);
     }else if(p.t==='box'){
       const style=p.op?'bboxOp':'bbox';
       // node sizes ignore the picture's scale=0.25, and the em-minimum can't
@@ -1405,6 +1594,10 @@ function renderTikZ(L,showLabels){
     if(p.t!=='wire')continue;
     if(Math.abs(p.x1-p.x2)<1e-9&&Math.abs(p.y1-p.y2)<1e-9)continue;
     const a=pt(p.x1,p.y1),b=pt(p.x2,p.y2);
+    if(p.c1x!==undefined){                 // explicit cubic controls
+      edges.push(`\t\t\\draw [wire] ${a} .. controls (${fmtN(p.c1x)}, ${fmtN(p.c1y)}) and (${fmtN(p.c2x)}, ${fmtN(p.c2y)}) .. ${b};`);
+      continue;
+    }
     let o='';
     if(p.out!==undefined){
       o=`, out=${fmtN(p.out)}, in=${fmtN(p.in)}`;
@@ -1429,6 +1622,7 @@ const STANDALONE_PRE=String.raw`\documentclass[margin=2mm]{standalone}
 \tikzstyle{none}=[inner sep=0pt]
 \tikzstyle{label}=[fill=none, draw=none, shape=circle, scale=0.6]
 \tikzstyle{black}=[circle, draw=black, fill=black, inner sep=0pt, minimum size=2.5pt]
+\tikzstyle{gennode}=[circle, draw=tapeBorder, line width=0.5pt, fill=white, inner sep=1pt, minimum size=1.4em, scale=0.6]
 \tikzstyle{bbox}=[fill=white, draw=black, chamfered rectangle, chamfered rectangle corners={north east}, chamfered rectangle sep=2pt, inner sep=1pt, minimum height=1.4em, minimum width=1.4em, scale=0.6]
 \tikzstyle{bboxOp}=[fill=white, draw=black, chamfered rectangle, chamfered rectangle corners={north west}, chamfered rectangle sep=2pt, inner sep=1pt, minimum height=1.4em, minimum width=1.4em, scale=0.6]
 \tikzstyle{tape}=[fill=tapeBg, draw=tapeBorder, line width=0.5pt]
@@ -1448,6 +1642,7 @@ function loadState(){
     return {
       term: s.term ?? 'copy(A) ; ([f] + star([g])) ; cocopy(A)',
       sig: s.sig ?? [{name:'f',dom:'A',cod:'A'},{name:'g',dom:'A',cod:'A'},{name:'R',dom:'A A',cod:'A'},{name:'c',dom:'',cod:'A'}],
+      alg: s.alg ?? [{name:'p',n:2}],
       zoom: s.zoom ?? 46,
       fmt: s.fmt ?? 'tikzit',
       labels: s.labels ?? true,
@@ -1455,12 +1650,12 @@ function loadState(){
     };
   }catch(e){
     return {term:'copy(A) ; ([f] + star([g])) ; cocopy(A)',
-            sig:[{name:'f',dom:'A',cod:'A'},{name:'g',dom:'A',cod:'A'}],zoom:46,fmt:'tikzit',labels:true};
+            sig:[{name:'f',dom:'A',cod:'A'},{name:'g',dom:'A',cod:'A'}],alg:[{name:'p',n:2}],zoom:46,fmt:'tikzit',labels:true};
   }
 }
 function saveState(){
   localStorage.setItem('tape-tool',JSON.stringify({
-    term:$('termIn').value,sig:state.sig,boxSc:state.boxSc||{},
+    term:$('termIn').value,sig:state.sig,alg:state.alg||[],boxSc:state.boxSc||{},
     zoom:+$('zoom').value,fmt:document.querySelector('input[name=fmt]:checked').value,
     labels:$('labelsChk').checked
   }));
@@ -1502,6 +1697,38 @@ $('addSym').onclick=()=>{
   while(state.sig.some(s=>s.name===nm))nm=base+(i++);
   state.sig.push({name:nm,dom:'A',cod:'A'});renderSig();update();saveState();
 };
+
+/* algebraic signature: theory operations name : arity n, used as name(U) */
+function renderAlg(flash){
+  const tb=$('algBody');tb.innerHTML='';
+  (state.alg||[]).forEach((s,i)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td><input value="${s.name}" data-i="${i}" data-f="name"></td>
+      <td style="color:var(--muted);white-space:nowrap">arity</td>
+      <td><input class="word" type="number" min="0" value="${s.n}" data-i="${i}" data-f="n"></td>
+      <td><button class="del" data-i="${i}" title="remove">✕</button></td>`;
+    if(flash&&flash.includes(s.name))tr.style.background='rgba(245,158,11,.18)';
+    if(s.auto){tr.style.opacity=.55;tr.title='inferred from the term — edit to keep';}
+    tb.appendChild(tr);
+  });
+}
+$('algBody').addEventListener('input',ev=>{
+  const i=+ev.target.dataset.i,f=ev.target.dataset.f;
+  delete state.alg[i].auto;
+  state.alg[i][f]=f==='n'?Math.max(0,parseInt(ev.target.value||'0',10)):ev.target.value.trim();
+  update();saveState();
+});
+$('algBody').addEventListener('click',ev=>{
+  if(ev.target.classList.contains('del')){
+    state.alg.splice(+ev.target.dataset.i,1);
+    renderAlg();update();saveState();
+  }
+});
+$('addAlgSym').onclick=()=>{
+  let base='p',i=1,nm=base;
+  while((state.alg||[]).some(s=>s.name===nm))nm=base+(i++);
+  (state.alg=state.alg||[]).push({name:nm,n:2});renderAlg();update();saveState();
+};
 document.querySelectorAll('.help code').forEach(el=>{
   el.addEventListener('click',()=>{
     if(el.textContent.includes(';')||el.textContent.includes('(')){
@@ -1522,18 +1749,25 @@ function update(){
   }
   try{
     const ast=parse(src);
-    const used=collectNames(ast);
-    const before=state.sig.length;
+    const used=collectNames(ast),usedAlg=collectAlgNames(ast);
+    const before=state.sig.length,beforeAlg=(state.alg||[]).length;
     state.sig=state.sig.filter(s=>!s.auto||used.has(s.name));
+    state.alg=(state.alg||[]).filter(s=>!s.auto||usedAlg.has(s.name));
     const added=[];
     const sigT=state.sig.map(s=>({name:s.name,dom:parseSigWord(s.dom),cod:parseSigWord(s.cod)}));
-    // typecheck against parsed signature; auto-added entries mirrored back
+    ALGSIG=state.alg.map(s=>({name:s.name,n:s.n}));
+    // typecheck against parsed signatures; auto-added entries mirrored back
     ttypecheck(ast,sigT,added);
     added.forEach(nm=>{
       const s=sigT.find(e=>e.name===nm);
       state.sig.push({name:nm,dom:s.dom.join(' '),cod:s.cod.join(' '),auto:true});
     });
-    if(added.length||state.sig.length!==before){renderSig(added);saveState();}
+    ALGSIG.forEach(e=>{           // operations inferred during typecheck
+      if(!state.alg.some(a=>a.name===e.name))state.alg.push({name:e.name,n:e.n,auto:true});
+    });
+    if(added.length||state.sig.length!==before)renderSig(added);
+    if(state.alg.length!==beforeAlg)renderAlg();
+    if(added.length||state.sig.length!==before||state.alg.length!==beforeAlg)saveState();
     // stable per-occurrence ids: n-th box with a given name, in term order
     const counts={};
     (function assignOccs(n){
@@ -1606,6 +1840,7 @@ $('dlSvg').onclick=()=>download('tape.svg',lastSvg,'image/svg+xml');
 
 /* init */
 renderSig();
+renderAlg();
 $('termIn').value=state.term;
 $('zoom').value=state.zoom;
 $('labelsChk').checked=state.labels;
